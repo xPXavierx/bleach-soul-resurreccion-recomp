@@ -1,0 +1,79 @@
+RSX FIFO publication and blocked-word notifications
+
+Problem confirmed by audit206: a consumer parked on a self-JUMP did not receive
+a notification when an SPU DMA replaced that word. The existing PUT notification
+does not cover such a publication: the PUT offset can remain unchanged. In the
+three-second gameplay observation, 1,410 DMA publications had known ready-to-
+consumer latency averaging 0.942 ms each. Across 231 complete presentation
+intervals, the observed ready-to-consumer time averaged 5.731 ms/frame. These
+are instrumented latency spans, not a measured clean FPS gain.
+
+Contract
+- One FIFO consumer, serialized by the existing FIFO lock, arms the exact
+  four-byte dependency: PUT changed, parked branch changed, or label equals.
+- DMA/list PUT reports the committed destination range after the memory copy
+  and coherence lock release. Successful conditional atomics and unconditional
+  atomics report after committing; failed conditional stores do not publish.
+- The producer notification only signals availability. The consumer still
+  reads/decodes the original commands and validates the original conditions.
+  Flip completion, D3D12 fences, resource retirement and simulation are untouched.
+- The consumer atomically publishes its watch with a sequentially consistent
+  exchange, then rechecks the guest word. DMA/atomic publishers use a full
+  memory barrier before reading the watch, including when it is zero. Thus a
+  covered publication either sees the armed watch or is seen by the recheck.
+  A release-only store plus a load on both sides would permit a lost wake
+  through store buffering; do not weaken these barriers without a new proof.
+- The existing auto-reset event retains a notification before entering the
+  wait. No busy spin, fabricated GPU completion or shortened polling interval.
+- PPU/HLE per-store hooks are best-effort observations. They do not put a full
+  memory barrier on every guest store. Existing PUT kicks remain, as does the
+  bounded timeout for these races and untracked bulk HLE memory writers.
+- One static callback/watch per process. The callback is installed before the
+  first watch and is never destroyed or replaced while producers can call it.
+  Producers recheck overlapping ranges under the watch lock, so an obsolete
+  callback cannot signal readiness based on a superseded dependency value.
+- Disabled by default. GCM_FIFO_PUBLISH_WAKE=1 enables the experiment. The
+  generic hook is shared by C and C++ translation units with a weak/selectany
+  object, avoiding a mandatory link dependency in standalone runtime tests.
+
+Audit
+GCM_FIFO_WAIT_AUDIT=start_ms:duration_ms:path.csv observes the same dependencies
+with or without wake enabled. Timestamps use QPC. Records distinguish observed
+post-copy publication, already-ready-on-arm, unknown writers, replacement and
+window truncation. Unknown timing is excluded from exact latency totals, never
+treated as zero. The retained timeout is measured, not altered by the audit.
+The window begins relative to the first consumer wait (~boot). Present logs
+carry the same QPC clock, permitting interval-level association without assuming
+that a guest counter equals a presentation index. The records do not measure
+CPU service time or guarantee that their entire latency is on the frame's
+critical path. Waits without an armed dependency are outside this diagnostic.
+
+Validation207
+- 12,000 two-thread DMA/atomic publication cases: before arming, entering wait,
+  concurrent arm/commit, dependency replacement, false predicate, retained event.
+- 1,006 audited records: post-copy timestamp ordering, source attribution,
+  overlapping and non-overlapping ranges (including 32-bit wrap boundaries),
+  readiness revocation, unknown writer, already-ready and truncated dependencies.
+- Existing production MFC list resume tests: actual GET/PUT, repark, empty and
+  concurrent resumes passed. Game audit and clean same-binary comparisons are
+  required before attributing FPS benefit or promoting this experimental mode.
+
+Scope
+This mechanism depends on PS3 FIFO publication rules, not Bleach addresses or
+job fingerprints. It is shared runtime infrastructure. It does not replace
+native geometry production, native animation interpolation or correctness tests
+for the rest of the renderer.
+
+Measured result208/209/210 — immediate wake REJECTED for the baseline
+One identical executable: OFF79.4444FPS; ON75.50 and74.8333FPS. Net regressions
+4.97% and5.80%, +0.658..0.776ms/frame. All presentations had new draws and all
+submissions retired. Route115..133s, output3840x2160, skinning2/vertex-pull1.
+The audit latency fell5.731->0.610ms/frame, but known DMA-ready observations
+rose1,410->20,600 in three seconds: the consumer woke for much smaller fragments.
+Recorded drain wall spans grew1252->1945ms over the instrumented window. Those
+spans are not CPU service time or additive critical-path costs. This experiment
+demonstrates why latency elimination alone cannot predict net FPS gain.
+Keep GCM_FIFO_PUBLISH_WAKE=0; the mode remains diagnostic/experimental only.
+Next: complete native geometry/output batches and explicit producer-consumer
+dependencies. Do not defer all publications until an entire list finishes
+without proving the absence of a producer->consumer->producer dependency.

@@ -1,0 +1,39 @@
+Native x86 floating-point backend for statically translated SPU work
+
+File: runtime/spu/spu_native_float_x86.h
+Synthetic differential test: runtime/spu/tests/test_spu_native_float_x86.c
+
+The backend implements FA/FS/FM/FMA/FMS/FNMS with SIMD operations. It retains
+the SPU integer reference for extended-range inputs and ambiguous overflow.
+Zero results are normalized to positive zero. It does not enable fast-math,
+replace SPU extended range with IEEE NaN/Inf behavior, or fuse separate guest
+operations. It is independent of title addresses, assets and engine timing.
+
+Caller contract
+Select this backend only on a CPU and OS with AVX2 and FMA support. Baseline
+code and feature detection must remain in separately compiled translation
+units without those instruction-set flags. Selection occurs at image entry.
+
+Save MXCSR before entering translated work. Set round-toward-zero, DAZ, FTZ,
+and masked floating exceptions. Restore the saved value after the complete
+work unit, including guest halt/stop handling. Do not expose this scope to
+unrelated PPU, audio, renderer or host code. Bleach's outer native-job wrapper
+owns this scope; the helpers deliberately do not change MXCSR per operation.
+
+DAZ already supplies zero for subnormal inputs. Repeating input normalization
+before each scalar/vector arithmetic instruction is redundant under this
+contract. The sign of an input zero cannot affect a nonzero finite arithmetic
+result. Output normalization is still required for positive-zero SPU results,
+and all exceptional inputs/results still follow the exact integer reference.
+
+Build the selected units with AVX2/FMA, floating-point contraction disabled
+except for explicit fused intrinsics, and dynamic rounding respected. Tested
+locally with Clang -mavx2 -mfma -ffp-contract=off -frounding-math -O2.
+
+Validation boundary
+The differential suite checks60,526,848 operation lanes against the integer
+reference, covering signs, zero/subnormals, normal/extreme exponents, overflow,
+cancellation and pseudorandom inputs. These tests passed on the i5-14600KF.
+They are not a hardware PS3 oracle or a cross-platform performance claim.
+Whole-game speed must be measured separately without this test or a profiler.
+The title compatibility header retains existing generated function names.

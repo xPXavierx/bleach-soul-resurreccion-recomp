@@ -1,0 +1,31 @@
+# Never commit anything from the game or this machine.
+*.elf
+*.self
+*.sprx
+*.prx
+*.PUP
+*.pup
+*.iso
+EBOOT.BIN
+PARAM.SFO
+*_image.bin
+# Generated from the game / firmware by construir.py
+bleach-recomp/recompiled/
+bleach-recomp/spu/
+bleach-recomp/fonts/
+bleach-recomp/gamedata/
+# Builds, caches, logs, saves
+build/
+build-*/
+out/
+scratch/
+__pycache__/
+*.exe
+*.dll
+*.obj
+*.o
+*.a
+*.log
+rsx_shader_cache*/
+hdd0/
+dev_hdd0/

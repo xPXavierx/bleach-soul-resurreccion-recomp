@@ -1,0 +1,38 @@
+[
+  {
+    "name": "libfont",
+    "base": "0x2000000",
+    "code_end": "0x200d258",
+    "prx_sha256": "b162e5aca9924d76a3e56621f89a74c2a7f8003575805c6aa9a26ed951314cd4",
+    "image_sha256": "9af9f79fccfc57e23b9b4bb88f04f7e1e74b70e961c3455ccfba69b6da9556ad",
+    "image_size": 79048,
+    "exports": 88
+  },
+  {
+    "name": "libfontFT",
+    "base": "0x2100000",
+    "code_end": "0x21098a0",
+    "prx_sha256": "0d316a76c03a4b7f5cb9a5088785bd3f2e54a64f1f2780012366209bbd2afa52",
+    "image_sha256": "d0fd56f40df93c42139dafe0fd1fd71b297820ef11e3e77218caf8033a393db3",
+    "image_size": 42116,
+    "exports": 102
+  },
+  {
+    "name": "libfreetype",
+    "base": "0x2200000",
+    "code_end": "0x225ac28",
+    "prx_sha256": "201ca40dc37068bf30b8d76fa1982484c3e3e337a7d21b3ca242c1bf9845c347",
+    "image_sha256": "59072f40efd0da040a6b511cb1269ccd2254b736454eecbfe2f077ed44994e49",
+    "image_size": 655360,
+    "exports": 249
+  },
+  {
+    "name": "libresc",
+    "base": "0x2300000",
+    "code_end": "0x230a78c",
+    "prx_sha256": "aec7822c3e49f52d638d5a540f35ad9cf976371bda9e6ee8571b8db4fdfbda8f",
+    "image_sha256": "cd13231ec70c631bbed8b9773c8c4023af160792a985986a1ea4a7c61cbce8d9",
+    "image_size": 51240,
+    "exports": 22
+  }
+]

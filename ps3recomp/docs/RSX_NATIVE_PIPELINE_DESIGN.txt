@@ -1,0 +1,201 @@
+Implementation checkpoint226
+Supported complete pose stage integrated behind BLEACH_NATIVE_POSE=1(default0).
+Pure bounded data spans for palette conversion, weighted positions/directions,
+normalization and reused scratch.1972 full differential checks passed in game;
+97.80% calls accepted, original fallback retained for unknown/stack-tail cases.
+FPS gain unmeasured: user reported another game running;227–229 invalidated,
+owned benchmark processes stopped. Wait for explicit game-closed signal before
+resuming performance tests. Reference stays pose0 until a clean comparison.
+This is not whole native geometry publication or temporal interpolation.
+See RUNTIME_NATIVE_GEOMETRY_POSE.txt and pose-nativa-226.txt/json.
+
+PREVIOUS CHECKPOINTS
+Implementation checkpoint222–225
+
+Final validation checkpoint222–225
+Build SHA256:0e7cc7b0558bbbbfd7fa205e366e3c0a8a5514854cdd90ff2c176557b4c3e188
+Final guarded adapter:32 original whole-stage pairs/6,636 padded vertices pass.
+Audit222:2040 differential checks, 2085392 native stages,
+10703 GPU submissions retired, render-only position changes0.
+Six reviewed stills retain player/world/HUD/tutorial; continuous motion unapproved.
+Same executable OFF/ON/ON:77.67FPS control,80.44FPS ONmean;
++3.58% (0.445ms), fixed18s115..133s window, one control only.
+Remaining conservative gap to120FPS:4.106ms. Decoder enabled in next
+experimental baseline; default0, public package unchanged. Prior timings use
+different builds and are not cumulative. Complete geometry/interpolation pending.
+
+HISTORICAL DESIGN
+Native geometry and ordered graphics pipeline — design and implementation checkpoints
+2026-10-26
+
+Current implementation checkpoint213, performance comparison213–216
+The actual draw path and auxiliary recording operations now use an owned,
+ordered command protocol. RSX_NATIVE_RECORDING=1 enables one recorder worker;
+default remains0. Resource/descriptor retirement preserves actual GPU fences.
+Preparation still owns guest decoding, caches, uploads and geometry fetch.
+This integrates deliveryB for native recording, not the whole decode/preparation
+split or complete native geometry. See RSX_NATIVE_RECORDING.txt for lifetimes,
+tests and diagnostic limitations. No Bloodborne/shadPS4 source incorporated.
+
+Same-build OFF/ON/ON/OFF: controls mean77.00FPS, ONmean78.11FPS;
++1.44% (0.185ms). Fixed18s scripted-route window, not full-game proof.
+Next structural priority: deliveryC, complete geometry results. Simulation
+interpolation and continuous shadow acceptance remain incomplete. Historic
+checkpoint211 below describes the previous synchronous stage, not current state.
+
+Implementation checkpoint211
+The production draw's final command recording now consumes
+rsx_native_draw_packet, with explicit pipeline/root, descriptor tables,
+render/depth targets, constants/vertex/index GPU addresses, dynamic state,
+sampled-target transitions and draw arguments. Its recorder receives the
+command list and binding state explicitly and has no dispatcher, guest-memory,
+vertex-scratch or mutable ring-offset access. Input payloads remain owned by
+the existing submission slot; synchronous recording preserves their leases.
+This is PART of delivery A below, not a complete decode/preparation split.
+Preparation still uses g.rsx/dc and may record auxiliary GPU operations.
+Clear, upload, blit/resolve, feedback/depth snapshots, movie composition,
+queries, readback and flush/reset still need an ordered integration before
+any packet can be deferred safely. No asynchronous queue is enabled.
+Real-GPU pixel/lifetime oracles passed26 checks; gameplay audit211 retired all
+10270 submissions. The requested D3D debug layer was unavailable; these are
+rendered-output checks, not a validation-layer pass. No new clean FPS result.
+
+Problem
+cellGcmSys.c synchronously dispatches methods to rsx_live_draw_method.
+rsx_dispatch invokes its end sink inline. sink_end_impl ignores the supplied
+state and uses global g.rsx/dc for fetch, resources and command recording.
+Guest input spans and inline arrays are borrowed. Adding a worker without
+changing these lifetimes makes subsequent state/memory writes race the draw.
+On the producer side, geometry still retains the SPU ABI around typed kernels.
+An independent result must cross both boundaries; a generic queue alone is
+not a useful implementation deliverable.
+
+Intended ownership graph
+Title adapter: mesh inputs + pose generation + view generation + dependencies
+    -> CPU geometry calculation with owned, typed results
+    -> ordered publication of completed units
+RSX capture: state + input versions/owned spans + operation sequence
+    -> bounded queue of immutable draw/clear/transfer/signal operations
+Graphics owner: resource lookup/update + barriers + D3D12 command recording
+    -> existing submission/frame-resource lifetime
+GPU completion -> retirement/reuse and applicable guest-visible completion
+
+The SDK owns packet/lease/ordering mechanisms. The title adapter identifies
+semantic game inputs and dependencies. No title addresses or assumptions
+about image1014 belong in the generic queue or graphics protocol.
+
+1. Sequence and completion types
+Keep distinct: decoded operation, inputs captured/prepared, API commands
+recorded, GPU work submitted, GPU fence completed, guest notification delivered.
+Each operation carries a monotonically increasing sequence and relevant
+dependencies. A recorded packet is NOT a completed GPU operation. Advancing
+FIFO GET means command bytes have been consumed; it must not falsely retire
+vertex/texture memory or turn all guest labels into generic GPU fences.
+Classify each guest synchronization operation by the actual dependency it
+represents. Keep the existing real completion semantics until each replacement
+is proven. GPU-idle, callbacks, blit/resolve and CPU readback are explicit.
+
+2. Immutable draw inputs
+The recording stage receives an explicit semantic state view, never the live
+dispatcher. Capture relevant render state, primitive/ranges, layout/frequency,
+viewport/scissor, program identity/version, constants, texture/surface bindings
+and all data that can change before use. Draw scratch belongs to its stage.
+Program records must be immutable while referenced. Inline vertex bytes cannot
+point into the dispatcher's reusable inline_data. Source indices/references
+must be captured before the source can be rewritten. Existing vertex-pull
+plans borrow spans until write(); queue only after ownership is established.
+
+Do not memcpy the full rsx_dispatch per draw: it includes coverage and inline
+scratch unrelated to most draws. Start with semantic records or changed blocks
+and a private consumer state. Do not infer unchanged memory from unchanged
+addresses/registers; program constants and resource content have versions too.
+
+3. Memory and resource leases
+A span is either owned by the packet/submission or protected by an explicit
+lease that prevents the producer from rewriting it until its reader finishes.
+A hash/version check alone is not a lease against a concurrent writer.
+The capture boundary must have ordering that already makes the data readable.
+Anticipatory reads overlapping earlier queued writes must be deferred or taken
+after the relevant predecessor completes. GPU-produced images/buffers remain
+resource handles with version/dependency information, not arbitrary RAM copies.
+Texture source storage needs the same rule as vertices and constants.
+
+The existing D3D12 frame resources retain upload data, descriptors and command
+allocators until their GPU fence. CPU packet storage may retire earlier only
+after its last CPU reader finishes. GPU-visible staging may not. Capacity is
+bounded, exhaustion applies backpressure, and overflow never drops a draw.
+
+4. Ordered consumer and special operations
+Initially use one owner for mutable PSO/texture/surface caches, descriptors,
+resource states, barriers and API recording. Capture/preparation must not
+concurrently mutate them. Shared immutable compiled programs may be leased.
+Clear, draw, transfer/resolve, flip and synchronization preserve stream order.
+CPU reads/writes, movie overlays, resize, debugging/readback and shutdown need
+an explicit ownership handoff or ordered operation. Draining a CPU stage is
+different from waiting for the GPU; do not introduce a GPU wait at every draw.
+Unsupported capture uses an ordered synchronous fallback after the necessary
+boundary, never a concurrent call into the same caches.
+
+5. Scheduling granularity
+Queue complete ready units, accumulate several operations per notification,
+and flush at dependency/latency/capacity boundaries. Do not require a whole
+frame to finish before publishing anything: an upstream producer may itself
+need a label generated by earlier work. Do not defer per-job completion to
+the end of a batch without proving there is no intra-batch dependency.
+Avoid a new task and join for each draw. Pure preparation workers consume
+owned inputs; results are used only after validation against the ordered
+consumer state, with fallback for stale/unsupported work. Introduce this pool
+only after the primary ownership split. Worker budgets respect available
+processors/affinity and retain an efficient single-thread path.
+
+6. Native geometry boundary
+Mesh identity and source format, pose/weights/palette, view/culling state and
+destination/publication dependencies become separate arguments/results.
+Do not use a cached SPU GPR/LS image as the native mesh result: it contains
+temporary addresses, stack/return state, lane identity and publication state.
+The existing typed skinning kernel is reusable arithmetic, not the whole job.
+Classify the consumers of the remaining phases before moving normal/tangent,
+transform or culling work. Preserve arithmetic/edge-case contracts and fall
+back for unknown input formats before any partial output is published.
+Keep simulation at its intended cadence; interpolation consumes stable pose
+and camera snapshots. Skipping unchanged simulation is not interpolation.
+
+7. Actual integration sites (current local tree)
+cellGcmSys.c:2329 and :2603 — method dispatch and consumed FIFO publication.
+rsx_dispatch.c:381–396 — begin/end state and sink boundary.
+rsx_live_draw.c:5476–5519 — draw scratch and reset.
+rsx_live_draw.c:6760–6810 — accumulation and borrowed inline input.
+rsx_live_draw.c:7562–8545 — monolithic fetch/preparation/recording.
+rsx_live_draw.c:8558,8657 — clear and flip ordering.
+rsx_live_draw.c:3413,3677,3785,9398,9830 — transfers/resolves/presentation.
+rsx_live_frame_resources.h — preserve existing GPU-owned storage retirement.
+rsx_vertex_pull.h/.c — reuse owned packet writer, not borrowed prepare plan.
+runtime/spu/spurs_job.c:506 — native-job adapter before original execution.
+libs/spurs/cellSpurs.c:2750–2868 — work units, lane reservation and completion.
+Bleach main.cpp:39 and native_geometry_tasks.h — title-specific adaptation.
+
+8. Delivery order and acceptance
+A. Refactor the production draw path to explicit owned input and stage-local
+   scratch. Initially execute that path synchronously. This is the first
+   executable deliverable; adding an unused queue does not satisfy it.
+B. Integrate the bounded ordered queue and its resource/guest-write boundaries.
+   Move recording to its owner thread only once the ownership contract holds.
+C. Integrate complete native geometry results with the same publication units;
+   validate actual consumers, not merely private arithmetic outputs.
+D. Add pure parallel preparation only if remaining critical costs justify it.
+
+Required evidence: byte/state equivalence where exact; stable images and
+continuous gameplay/shadow motion; correct order across wrap, earlier writes,
+signals, resource reuse and shutdown; every submission retires at the actual
+fence. Then one coherent clean A/B of the complete change with existing route,
+frame-time distribution and new-work counters. Repeat only for new changes,
+failures or unresolved uncertainty. No performance credit for a refactor alone.
+
+Preserved experimental baseline: skinning2, vertex-pull1, fifo-wake0, build207.
+Do not re-enable the rejected immediate-publication wake experiment. Avoid
+parallel arrays of independent tuning experiments before this boundary works.
+
+Reference: Bloodborne_pc docs/parallel_gpu.md, vk_draw_prep.cpp,
+vk_pipeline_cache.cpp, vk_rasterizer.cpp, vk_draw_pipe.h, vk_constant_ring.h,
+bbport_copy.cpp and amdgpu/liverpool.cpp at the revision above. Architectural
+principles are independently specified here. GPL source is not relicensed MIT.

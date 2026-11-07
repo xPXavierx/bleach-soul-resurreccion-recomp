@@ -1,0 +1,86 @@
+Native geometry stream decoding — experimental data-level stage
+
+native_geometry_decode.h implements a complete stream-decoding job over explicit
+input/output spans, without SPU registers, LS addresses, guest dispatch, allocation
+or callbacks. The owner retains those spans until completion. The current x86
+implementation requires AVX2/FMA and the title's round-toward-zero, DAZ/FTZ mode.
+The title's existing ISA dispatch preserves its original path on other hosts.
+
+Inputs
+- Packed big-endian xyz float32 positions,12 bytes per vertex. Their bits are
+  preserved, including signed zero and special float encodings; w is1.0.
+- Optional interleaved32-bit directions, explicit stride and byte offsets:
+  signed11-bit x in bits0..10, signed11-bit y in11..21, signed10-bit z in22..31.
+  Convert exactly to x/1024,y/1024,z/512, then FMA with the original bit-exact
+  scale[3f801002,3f801002,3f802008] and bias[3a001002,3a001002,3a802008].
+  This preserves the original asymmetric normalized mapping, including its
+  rounded endpoints. It is not replaced with a similar-looking normalization.
+- Explicit vertex count, including any padding required by the caller's format.
+
+Outputs
+One16-byte float4 position stream and up to three float4 direction streams.
+Output storage can be host order or big endian. This lets future consumers use
+native floats, while the current title adapter publishes bytes to the existing
+downstream geometry path. Validation rejects overlapping outputs/inputs and
+short spans before any output write. All allocations and completion ownership
+remain outside the pure arithmetic/format kernel.
+
+Bleach adapter
+native_geometry_decode_plan.h decodes the descriptor into a complete plan and
+stages descriptor updates before executing. It accepts primary format0 and an
+absent/no-op secondary stream or the audited generic packed-direction format.
+It checks counts, stride, tags, output slots, bounded private memory, callbacks
+and aliases. Partial-attribute mode (header bit4) and unknown formats fall back
+before output publication. Complete-stage decoding replaces only the observed
+top-level0x408 call to0x9828, not arbitrary other calls into that function.
+
+The original caller reloads r3/r4/r5 before calling7F58. That next stage consumes
+those arguments plus callee-saved state; volatile scratch registers and the
+returned callee's private stack are not the geometry result. Runtime verification
+checks the return link/PC, stack pointer, callee-saved registers, execution status
+and every private-memory byte outside the dead stack region. It checks geometry
+outputs, all descriptor bytes and unrelated memory, rather than merely comparing
+an isolated math loop. Output/input/descriptor spans cannot alias that stack.
+The adapter still publishes into the job's private LS-backed buffers: this is a
+data-level decoding stage, not yet a wholly native geometry submission pipeline.
+
+BLEACH_NATIVE_DECODE=1 enables the experimental adapter; default remains0.
+BLEACH_NATIVE_DECODE_VERIFY=N performs one differential check perN accepted
+calls per worker. Verification is diagnostic only and excluded from FPS runs.
+BLEACH_GEOMETRY_CONTRACT_CAPTURE=start_ms:duration_ms:path records at most32
+diverse before/after examples of each of three phases for offline validation.
+Those snapshots are oracles only; no snapshot cache is used during gameplay.
+
+Evidence
+Capture217 contains96 complete pairs over0x9828,0x98E0 and0x5110. The new
+decoder matched32 complete0x9828 results (6,636 padded vertices), descriptors
+and every non-stack byte. Live audit218 executed2,077,911 native decode stages,
+1,851,302 with packed streams, no declined stages in that route, and2,033
+successful differential checks. All10,674 GPU submissions retired, render-only
+position changes remained0. Six stills retained player/world/HUD/tutorial.
+This is not continuous shadow, interpolation or full-game acceptance.
+The later partial-attribute-mode/alias guard refinement has separate validation;
+do not silently attribute earlier hashes or timings to a later executable.
+
+test_native_geometry_decode.c uses guard-page inputs to catch overreads, golden
+direction values from the original output, both output byte orders and invalid
+spans/aliases whose rejection must leave all outputs unchanged.
+
+Next structural work
+Extend the same data boundary through complete pose/skinning, view-dependent
+triangle processing and ordered publication. The existing typed skinning kernel
+is arithmetic to reuse. Do not treat this stage as whole-job completion or sum
+its wall time with overlapping renderer/GPU timings. Performance is recorded
+in the title's same-executable A/B reports, not inferred from fewer instructions.
+
+Final validation checkpoint222–225
+Build SHA256:0e7cc7b0558bbbbfd7fa205e366e3c0a8a5514854cdd90ff2c176557b4c3e188
+Final guarded adapter:32 original whole-stage pairs/6,636 padded vertices pass.
+Audit222:2040 differential checks, 2085392 native stages,
+10703 GPU submissions retired, render-only position changes0.
+Six reviewed stills retain player/world/HUD/tutorial; continuous motion unapproved.
+Same executable OFF/ON/ON:77.67FPS control,80.44FPS ONmean;
++3.58% (0.445ms), fixed18s115..133s window, one control only.
+Remaining conservative gap to120FPS:4.106ms. Decoder enabled in next
+experimental baseline; default0, public package unchanged. Prior timings use
+different builds and are not cumulative. Complete geometry/interpolation pending.

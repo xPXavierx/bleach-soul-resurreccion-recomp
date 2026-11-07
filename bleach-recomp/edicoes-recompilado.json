@@ -1,0 +1,1554 @@
+{
+ "arquivos": {
+  "recompiled/ppu_recomp_000.cpp": {
+   "antes": "98f74d22567b74f094c9a58aa358ccac74dc4e92aafd55ab263cd2c577772cc1",
+   "depois": "0a765884f1b88ea798d7c37a8e822ac50f35250423ba4ddda56d9eaf0a65b6da",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);",
+      "extern \"C\" int bleach_engine_call_decimated(uint32_t);",
+      "extern \"C\" int bleach_game_counter_step(void);",
+      "extern \"C\" int bleach_half_call_enter(uint32_t);",
+      "extern \"C\" void bleach_half_call_leave(int);"
+     ]
+    },
+    {
+     "linha": 8,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int bleach_engine_frame_count_step();"
+     ]
+    },
+    {
+     "linha": 10082,
+     "remover": 1,
+     "sha": "aea3dcac9ccb05bb2a0ad42b9b94389a28fdd702262fe6452e452e9fe5829a7d",
+     "inserir": [
+      "        ctx->gpr[9] = ctx->gpr[9] + (int64_t)(bleach_engine_frame_count_step()); /* BLEACH_FRAMECOUNT_TICKS hand edit */"
+     ]
+    },
+    {
+     "linha": 14600,
+     "remover": 1,
+     "sha": "941504674b1417f126a28d97dbb4f8cb94022db70310d80cb702122c51c96f73",
+     "inserir": [
+      "            if(native_step==2) vm_write32(ctx->gpr[30]+0x14,vm_read32(ctx->gpr[30]+0x14)+bleach_game_counter_step()); /* once per original update */"
+     ]
+    },
+    {
+     "linha": 14629,
+     "remover": 1,
+     "sha": "527c1cd54cf4be5175a7854bc20e7747c4fee1b558964657bee24a99c48277ff",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001CEF8)) { const int half_w=bleach_half_call_enter(0x0001CEF8); ctx->lr = 0x0001CEF8; func_0022CEEC(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14631,
+     "remover": 1,
+     "sha": "eca4662eb725607c24868cfd62bffda5c5362ccbf626d072949dec3f8d5a63ce",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001CF00)) { const int half_w=bleach_half_call_enter(0x0001CF00); ctx->lr = 0x0001CF00; func_0001D2BC(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14633,
+     "remover": 1,
+     "sha": "014ed3fe3444fc05578f2432887bbd5f673f8bef823aefb26dc5029fe70b2a0b",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001CF08)) { const int half_w=bleach_half_call_enter(0x0001CF08); ctx->lr = 0x0001CF08; func_00280700(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14635,
+     "remover": 1,
+     "sha": "5c82fd8e0829dbb7fd781b26033100ac01b909d8e8540bb930253e63c304b954",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001CF10)) { const int half_w=bleach_half_call_enter(0x0001CF10); ctx->lr = 0x0001CF10; func_00022B9C(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14637,
+     "remover": 1,
+     "sha": "4528bd23fd5144995caded1fbc7a5f1fbabfe7bdecf313b0b99ce3ad50427bfb",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001CF18)) { const int half_w=bleach_half_call_enter(0x0001CF18); ctx->lr = 0x0001CF18; func_0002817C(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14710,
+     "remover": 1,
+     "sha": "9c6b77e54d55c6325c5749f8e94e760ea9b5c392a07eb554ee16030a542c868f",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001D018)) { const int half_w=bleach_half_call_enter(0x0001D018); ctx->lr = 0x0001D018; func_0002D2F4(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14718,
+     "remover": 1,
+     "sha": "1eb10ab639ce997780f9c1393c44a5a8a4e4e83e8efb51a1361fb59e30e2123c",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001D034)) { const int half_w=bleach_half_call_enter(0x0001D034); ctx->lr = 0x0001D034; func_00011680(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14734,
+     "remover": 1,
+     "sha": "b1e0ab93919466d4ebcc4fb34277f1fdd7a5a0d0872807f7770f25c04d3f0cbb",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001D06C)) { const int half_w=bleach_half_call_enter(0x0001D06C); ctx->lr = 0x0001D06C; func_0022CEEC(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14736,
+     "remover": 1,
+     "sha": "ac9c8db70418c2a961415ad46e470e67d5cc6fec7bfa685bcc069a99905ad7a9",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001D074)) { const int half_w=bleach_half_call_enter(0x0001D074); ctx->lr = 0x0001D074; func_0001D2BC(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14738,
+     "remover": 1,
+     "sha": "461109ffe10bab0c7197f89839eb89449c73f31827d6c0474f74dc4d9d28cbe9",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001D07C)) { const int half_w=bleach_half_call_enter(0x0001D07C); ctx->lr = 0x0001D07C; func_00280700(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14740,
+     "remover": 1,
+     "sha": "afa54042febc3dbc6e07ee920f0325e81157a190ad3bb4da419857c90e214fff",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001D084)) { const int half_w=bleach_half_call_enter(0x0001D084); ctx->lr = 0x0001D084; func_00022B9C(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    },
+    {
+     "linha": 14742,
+     "remover": 1,
+     "sha": "dd69b3e460adeeae43a9358f462a8f046020221e1878cd434b826e08549c2938",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0001D08C)) { const int half_w=bleach_half_call_enter(0x0001D08C); ctx->lr = 0x0001D08C; func_0002817C(ctx); DRAIN_TRAMPOLINE(ctx); bleach_half_call_leave(half_w); } /* HAND EDIT: BLEACH_CALL_HALF */"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_001.cpp": {
+   "antes": "640d2e5af2e77c737bc7426fa17587fe35d72c537bc9ccec229589b3755e918a",
+   "depois": "7a586fa1f6cb0810661bbeb5e41b972b06e273e25fe47124ecf1f754ac7223f5",
+   "trechos": [
+    {
+     "linha": 4,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "#include <stdlib.h>\r",
+      "extern \"C\" int bleach_scale_time_effect(int, uint32_t);\r",
+      "extern \"C\" int bleach_substeps_for(uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 17830,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        /* BLEACH_SUBSTEPS hand edit: time-effect sub-steps scale like the default 4. */\r",
+      "        ctx->gpr[3] = (uint32_t)bleach_scale_time_effect((int32_t)ctx->gpr[3], (uint32_t)ctx->gpr[31]);\r"
+     ]
+    },
+    {
+     "linha": 17844,
+     "remover": 1,
+     "sha": "6e815ff642f398235982acb742da1f4e0d6bf3d97b6879980ad42aba5ed8251a",
+     "inserir": [
+      "        /* BLEACH_SUBSTEPS (experiment, hand edit): default per-tick movement\r",
+      "         * sub-step count returned for actors without a time effect (game: 4). */\r",
+      "        /* 4 per original update, split over the ticks since this object last ran. */\r",
+      "        ctx->gpr[3] = (int64_t)(int32_t)bleach_substeps_for((uint32_t)ctx->gpr[31]);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_004.cpp": {
+   "antes": "97033f51125bdb7f77e8a4591c4b0d6e405ecc336d86d0cf53eb1343fda67e38",
+   "depois": "2fcf530c173f32e519af82e1f801caafaf0c9964c3ec9c298e00556b0c733b89",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 10980,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 10989,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_005.cpp": {
+   "antes": "ae46aad98d30ad5ca1e2b6f35fec531ca30381f15b1cf6de5acd3a1ed1399d7d",
+   "depois": "f6c353a1b4471135bd961d87820824a24b79d26dfbf986635cb61975363186f6",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_frames_to_ticks(uint32_t);\r",
+      "extern \"C\" void bleach_stack_probe(ppu_context*, const char*, unsigned*);\r",
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" int bleach_engine_call_decimated(uint32_t);\r",
+      "extern \"C\" int bleach_tick_ratio(void);\r",
+      "extern \"C\" int32_t bleach_camera_step(double, int);\r"
+     ]
+    },
+    {
+     "linha": 3579,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        { static unsigned seen; bleach_stack_probe(ctx,\"req-5EF40\",&seen); } /* BLEACH_STACK_PROBE hand edit */\r"
+     ]
+    },
+    {
+     "linha": 3583,
+     "remover": 1,
+     "sha": "58c0e7df2c93ecbbd274bc883aa2b6927247dc2dbea9ea28fed4f48f44ab5464",
+     "inserir": [
+      "        { static unsigned seen; bleach_stack_probe(ctx,\"cam-ease\",&seen); } /* BLEACH_STACK_PROBE hand edit */ vm_write32(ctx->gpr[9] + 0x184, bleach_frames_to_ticks((uint32_t)ctx->gpr[4])); /* HAND EDIT: camera ease length in ticks */\r"
+     ]
+    },
+    {
+     "linha": 3699,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        { static unsigned seen; bleach_stack_probe(ctx,\"req-5F0DC\",&seen); } /* BLEACH_STACK_PROBE hand edit */\r"
+     ]
+    },
+    {
+     "linha": 3811,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        { static unsigned seen; bleach_stack_probe(ctx,\"req-5F274\",&seen); } /* BLEACH_STACK_PROBE hand edit */\r"
+     ]
+    },
+    {
+     "linha": 4274,
+     "remover": 1,
+     "sha": "b98d334d88a0d44bfdb1918c381f70f03e6d3eb8a2ca0e14443ddf4b98f1e1a3",
+     "inserir": [
+      "        ctx->gpr[0] = (int64_t)(int32_t)(4 * bleach_tick_ratio()); /* HAND EDIT: 4 original updates */\r"
+     ]
+    },
+    {
+     "linha": 4758,
+     "remover": 1,
+     "sha": "647f9c1877458be67f42f6324e7c49be1c10a2d7e2094b8570a37e94e7739101",
+     "inserir": [
+      "        { int64_t iv = bleach_tick_ratio() > 1 ? bleach_camera_step(ctx->fpr[0], 0) : (int32_t)ppu_f2i32(ctx->fpr[0], 0); memcpy(&ctx->fpr[0], &iv, 8); } /* HAND EDIT: turn step carry */\r"
+     ]
+    },
+    {
+     "linha": 5118,
+     "remover": 1,
+     "sha": "647f9c1877458be67f42f6324e7c49be1c10a2d7e2094b8570a37e94e7739101",
+     "inserir": [
+      "        { int64_t iv = bleach_tick_ratio() > 1 ? bleach_camera_step(ctx->fpr[0], 1) : (int32_t)ppu_f2i32(ctx->fpr[0], 0); memcpy(&ctx->fpr[0], &iv, 8); } /* HAND EDIT: turn step carry */\r"
+     ]
+    },
+    {
+     "linha": 5250,
+     "remover": 1,
+     "sha": "647f9c1877458be67f42f6324e7c49be1c10a2d7e2094b8570a37e94e7739101",
+     "inserir": [
+      "        { int64_t iv = bleach_tick_ratio() > 1 ? bleach_camera_step(ctx->fpr[0], 2) : (int32_t)ppu_f2i32(ctx->fpr[0], 0); memcpy(&ctx->fpr[0], &iv, 8); } /* HAND EDIT: turn step carry */\r"
+     ]
+    },
+    {
+     "linha": 5641,
+     "remover": 1,
+     "sha": "5fa381567fd8245572997a4aa21c7188bca77cf5543595092513a754f4a1841f",
+     "inserir": [
+      "        { static unsigned seen; bleach_stack_probe(ctx,\"cam-trans-958\",&seen); } /* BLEACH_STACK_PROBE hand edit */ vm_write32(ctx->gpr[3] + 0xE8, bleach_frames_to_ticks((uint32_t)ctx->gpr[7])); /* HAND EDIT: camera transition length in ticks */\r"
+     ]
+    },
+    {
+     "linha": 5948,
+     "remover": 1,
+     "sha": "7fa79691ea78ecd2f3674320a315dd8cc6e319c2348471acf2b64ffee1268bfb",
+     "inserir": [
+      "        { static unsigned seen; bleach_stack_probe(ctx,\"cam-trans-ce0\",&seen); } /* BLEACH_STACK_PROBE hand edit */ vm_write32(ctx->gpr[3] + 0xE8, bleach_frames_to_ticks((uint32_t)ctx->gpr[5])); /* HAND EDIT: camera transition length in ticks */\r"
+     ]
+    },
+    {
+     "linha": 9557,
+     "remover": 1,
+     "sha": "ffdf5918b92f112e2518e4f3853839b6d9cc0e3d08ce63c58ef0da12ce1921cc",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x00064684)) { ctx->lr = 0x00064684; func_0022D8C4(ctx); DRAIN_TRAMPOLINE(ctx); } /* BLEACH_CALL_HALF hand edit */\r"
+     ]
+    },
+    {
+     "linha": 9559,
+     "remover": 1,
+     "sha": "91b4babddcaeb43f5c35120e56293c04c344b930104bbf8df2605d02c8366884",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0006468C)) { ctx->lr = 0x0006468C; func_001EDEBC(ctx); DRAIN_TRAMPOLINE(ctx); } /* BLEACH_CALL_HALF hand edit */\r"
+     ]
+    },
+    {
+     "linha": 9563,
+     "remover": 1,
+     "sha": "dd30bc0fbefd1de9a4e5cc7e81e3ba9e6bd9bcea936af9f6dd7962dd8e41a202",
+     "inserir": [
+      "        if(!bleach_engine_call_decimated(0x0006469C)) { ctx->lr = 0x0006469C; func_00023990(ctx); DRAIN_TRAMPOLINE(ctx); } /* BLEACH_CALL_HALF hand edit */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_006.cpp": {
+   "antes": "f3e4f77bdf798374dd965f9923545d227a032c017744342ad10bf2938b6f1ca2",
+   "depois": "bdedf7dd6ac2e1eec1251e6ab72862e9c07d02b9cd132051c20719077166dd55",
+   "trechos": [
+    {
+     "linha": 1689,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        /* HAND EDIT: the per-update pool of 128 entries (+0x1A34 free list, refilled by func_0006CCB0 from task\r",
+      "         * 6CF14) is empty: skip the entry instead of unlinking a null node (the original frees garbage and aborts) */\r",
+      "        if (!vm_read32((uint32_t)ctx->gpr[3] + 0x1A38)) {  return; }\r"
+     ]
+    },
+    {
+     "linha": 1921,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        /* HAND EDIT: the per-update pool of 128 entries (+0x1A34 free list, refilled by func_0006CCB0 from task\r",
+      "         * 6CF14) is empty: skip the entry instead of unlinking a null node (the original frees garbage and aborts) */\r",
+      "        if (!vm_read32((uint32_t)ctx->gpr[3] + 0x1A38)) { ctx->gpr[3] = 0; return; }\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_007.cpp": {
+   "antes": "52f437e74bfc3db2b04e7df2164cf4f2193433b25265c4593b80704abfa3b857",
+   "depois": "95f9043e58c08f79dd1bb318d686a02be7d3fa7c2efb2a38f855560f5d9caa9e",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 4466,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_008.cpp": {
+   "antes": "67ccdde039f7b3c2a23ad74e9466d004f4d011dce12478ddb88bffd59cd3a3f8",
+   "depois": "8e00f84180f9e8d497c0eb7cb36628d6484d968371bf73d47a9f73273d161efe",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_009.cpp": {
+   "antes": "e2746bcaa9492a70de0f54032fcdfb669b0b969961146341c26065d84be0d347",
+   "depois": "53122ad41c96ea83e07071b01cca55742012b189858bc6a0aca1f82d7ffaca2b",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" void bleach_stack_probe(ppu_context*, const char*, unsigned*);\r"
+     ]
+    },
+    {
+     "linha": 4667,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        { static unsigned seen; bleach_stack_probe(ctx,\"actor-update\",&seen); } /* BLEACH_STACK_PROBE hand edit */\r"
+     ]
+    },
+    {
+     "linha": 15834,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_010.cpp": {
+   "antes": "e3969f660a128488a5d322e47e278ca7e946a0fa0042b28c06c0a1927c86734f",
+   "depois": "ee7839fc3afe10df38b9cea831139cfb54819b02d44da89e1fd4096af7211ef9",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 4349,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 9917,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 13941,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_015.cpp": {
+   "antes": "2febd31fac9f9d05b10a4d02aeb3291c2d94286ed8709bab21a4f7b7a16c0b22",
+   "depois": "672aac447ff0b53fa10b323868ea46ee44572e6d2385b7c17f0c359aa3e77a51",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 4823,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 11550,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 15575,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_016.cpp": {
+   "antes": "08d78872770960a302d9ffa45fd09db1beadf863d7bc508d6ff01827d54d7c0c",
+   "depois": "bbee02fc1d35ff94e0d6bab7e09edfd29fc25253d60f46648649b4f99e40cd6a",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 2347,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 5842,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 12582,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 16236,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_017.cpp": {
+   "antes": "5f7129050820ffb5ce9fa35421f9449dbf9171c2124d4d7cf4f8e79162492536",
+   "depois": "42f5e6506696dffcf0fb05f35a5d8cef53465e852ac92486835cc33565140179",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 7725,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 14109,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_018.cpp": {
+   "antes": "00d94c5e3912cc7bf0af3fca0460bc557eadd934eaa0b32cdd9fdcd78ee0ae80",
+   "depois": "40ff03795b991a55f11299f8b2a41888b37f7efecf4ae9d88628b65340e906b7",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 3980,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 7829,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 16108,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_027.cpp": {
+   "antes": "55abe7ec17679bff0498462dbf4860bc0e13e1dfbdfd002a593a76a6f1cd7fee",
+   "depois": "94d1580906914ac4245af92eb1f268affd01dea7ad745f33fc105e05ffd69735",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 12452,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 12461,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 12470,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 12901,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 12931,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 12948,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 12984,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 13131,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 13914,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 16102,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update(0x1000, (uint32_t)ctx->gpr[3]); /* HAND EDIT: one animation frame per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 16523,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_028.cpp": {
+   "antes": "c680d73160350ee9dc25205853ef21bd74d8cc1bcf24748349c103d74c533902",
+   "depois": "0a670b4c6819f6e8c243bb98c4ccd2554c0f24edba8a3921692c8bb5cd6a4ab3",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" void bleach_scroll_begin(uint32_t);\r",
+      "extern \"C\" double bleach_scroll_speed(double);\r"
+     ]
+    },
+    {
+     "linha": 519,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 914,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 1383,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        bleach_scroll_begin((uint32_t)ctx->gpr[3]); /* HAND EDIT: scroll speeds per original update */\r"
+     ]
+    },
+    {
+     "linha": 1517,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->fpr[0] = bleach_scroll_speed(ctx->fpr[0]); /* HAND EDIT: scroll speed */\r"
+     ]
+    },
+    {
+     "linha": 1520,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->fpr[0] = bleach_scroll_speed(ctx->fpr[0]); /* HAND EDIT: scroll speed */\r"
+     ]
+    },
+    {
+     "linha": 1546,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->fpr[13] = bleach_scroll_speed(ctx->fpr[13]); /* HAND EDIT: scroll speed */\r"
+     ]
+    },
+    {
+     "linha": 1551,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->fpr[13] = bleach_scroll_speed(ctx->fpr[13]); /* HAND EDIT: scroll speed */\r"
+     ]
+    },
+    {
+     "linha": 1557,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->fpr[13] = bleach_scroll_speed(ctx->fpr[13]); /* HAND EDIT: scroll speed */\r"
+     ]
+    },
+    {
+     "linha": 4398,
+     "remover": 1,
+     "sha": "b648f0302e0fccc2dd47da8d24c4f9e69279bb98b50f96caf08dff0570184bcc",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[0]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[30] + 0xB0C, bleach_clock_f32((uint32_t)(ctx->gpr[30] + 0xB0C), (uint32_t)(tmp), 0x3AFE40DFu)); } /* CLOCK: per-tick clock, func_001BBEA4 xtask */\r"
+     ]
+    },
+    {
+     "linha": 4568,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update(0x1000, (uint32_t)ctx->gpr[3]); /* HAND EDIT: one animation frame per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 10883,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 11020,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 11216,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 11226,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_029.cpp": {
+   "antes": "16dfa46620fa5f947fff136d3ec87990b425dcdfd144f8205395a84cbad7df21",
+   "depois": "2060182eda617edb266bcd3aea2bd4d53145bcf701a131d18db674b05570f098",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_032.cpp": {
+   "antes": "385595fecdcb3ec6b028de2feb4cfa7b1bbf3b0789c84e6429157d5623664579",
+   "depois": "aa21956c314551deb37024f6c5872f4ab2996785041652e8762eb7b61face478",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_033.cpp": {
+   "antes": "382db4f2a3c6f5d1b3d58eb647df504fe953aac2278f588521099bec27f92b0b",
+   "depois": "b821657c17b9b677206a23d1db78abe9a85154944788d3f99117bc1967affa2f",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 12809,
+     "remover": 1,
+     "sha": "26d1c031104e719c1efb8262940ebafb0eb6746c1b07a344baee28b75933325e",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[12]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[28] + 0x4, bleach_clock_f32((uint32_t)(ctx->gpr[28] + 0x4), (uint32_t)(tmp), 0x9617BB39u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 12812,
+     "remover": 1,
+     "sha": "ce587c10c57bd986b6b0f8196a78d0d027bf00d3293c1961f809bdb5e60ae601",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[8]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[28] + 0x0, bleach_clock_f32((uint32_t)(ctx->gpr[28] + 0x0), (uint32_t)(tmp), 0x18DE53F0u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 12814,
+     "remover": 1,
+     "sha": "c554081e48473eaeedaf228317cdebf3ade45b14e2165b7d9c365f627b882afd",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[10]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[28] + 0x8, bleach_clock_f32((uint32_t)(ctx->gpr[28] + 0x8), (uint32_t)(tmp), 0xF1BDF6C5u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 12818,
+     "remover": 1,
+     "sha": "db40159a29de56b2cb21c99d65e42941bfb62b11ff7e99e0c5d570a7331a0a21",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[11]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[30] + 0x8C, bleach_clock_f32((uint32_t)(ctx->gpr[30] + 0x8C), (uint32_t)(tmp), 0xF80BBAEEu)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 12822,
+     "remover": 2,
+     "sha": "a383336e29902f83d4fc4d4eb45a3c785746bc06234d24b2e641047b2706cdef",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[12]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[9] + 0x8, bleach_clock_f32((uint32_t)(ctx->gpr[9] + 0x8), (uint32_t)(tmp), 0x33F30033u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r",
+      "        { float ftmp = (float)ctx->fpr[0]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[9] + 0x4, bleach_clock_f32((uint32_t)(ctx->gpr[9] + 0x4), (uint32_t)(tmp), 0x44F430A5u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 12829,
+     "remover": 1,
+     "sha": "ea8346f5d859bbb3d23245d920d65945471bd8947126f642dfebef02663ec4fb",
+     "inserir": [
+      "        vm_write32(ctx->gpr[30] + 0xA0, bleach_clock_i32((uint32_t)(ctx->gpr[30] + 0xA0), (uint32_t)(ctx->gpr[0]), 0xA421D9BBu)); /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 13033,
+     "remover": 1,
+     "sha": "5d2923ec62f7cd537ba73ab27f0eb9d00730e3268f24c1b62a88ea8a7cce7879",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[11]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[30] + 0x88, bleach_clock_f32((uint32_t)(ctx->gpr[30] + 0x88), (uint32_t)(tmp), 0xEB403739u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 13035,
+     "remover": 2,
+     "sha": "fda40e209c03245d500d04cd5d5170abaf8b4168d27dd2e90566a78b3d03f07a",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[13]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[30] + 0x8C, bleach_clock_f32((uint32_t)(ctx->gpr[30] + 0x8C), (uint32_t)(tmp), 0x0223920Cu)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r",
+      "        { float ftmp = (float)ctx->fpr[10]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[30] + 0x90, bleach_clock_f32((uint32_t)(ctx->gpr[30] + 0x90), (uint32_t)(tmp), 0x9B2AC3B6u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 13095,
+     "remover": 1,
+     "sha": "85a6a276aef468888fc50c48b49a330ffa2c197bdf45d9cf7cd92031f3c2616f",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[12]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[30] + 0x88, bleach_clock_f32((uint32_t)(ctx->gpr[30] + 0x88), (uint32_t)(tmp), 0xF8CC7A86u)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    },
+    {
+     "linha": 13097,
+     "remover": 1,
+     "sha": "98a1ec9b40e45cf5605836a8bf8376d55765dffd33384212c776915c8c1786e4",
+     "inserir": [
+      "        { float ftmp = (float)ctx->fpr[11]; uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[30] + 0x90, bleach_clock_f32((uint32_t)(ctx->gpr[30] + 0x90), (uint32_t)(tmp), 0x16C21BAAu)); } /* CLOCK: per-tick clock, func_0020FBA8 xtask */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_034.cpp": {
+   "antes": "d41be085a350614443f2c09a6f3f47343f411904236e52f8c056fe66bd0cc521",
+   "depois": "ee57e67fe6a0188fde05da438fc365212eec7d0dfa545e51ea1f9b5405c5b805",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 5948,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_035.cpp": {
+   "antes": "70d46d83a7221408f16568823a100ec1800f1e3304904bc372bb8116db54ccd2",
+   "depois": "ca651b47733923c4d39de3e204dd00345074d0d9d5903b073e1026cb19687863",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" int bleach_elapsed_ticks(uint32_t);\r",
+      "extern \"C\" int bleach_update_frames(uint32_t);\r",
+      "extern \"C\" void bleach_step_log(uint32_t, int32_t, int);\r",
+      "extern \"C\" int32_t bleach_model_step(uint32_t, int32_t);\r",
+      "extern \"C\" void bleach_model_step_written(uint32_t, int);\r",
+      "extern \"C\" void bleach_anim_log(char, uint32_t, int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 7726,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        bleach_model_step_written((uint32_t)ctx->gpr[3],0); /* HAND EDIT: step written by this caller (per tick when it runs every tick) */\r"
+     ]
+    },
+    {
+     "linha": 8280,
+     "remover": 1,
+     "sha": "49220adf4ee74f2478b508021ba749ec25736be5f55c6f996aa8c18dc37565af",
+     "inserir": [
+      "        /* HAND EDIT: the script's WAIT counts original frames, not ticks (bleach_update_frames) */\r",
+      "        { const int32_t left=(int32_t)ctx->gpr[9]-bleach_update_frames((uint32_t)ctx->gpr[31]^0x0022A1B4u);\r",
+      "          ctx->gpr[0] = (uint64_t)(int64_t)(left<0?0:left); }\r"
+     ]
+    },
+    {
+     "linha": 8328,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        /* HAND EDIT: advance by the step for the ticks this run covers -- the actor stores a per-tick step,\r",
+      "         * cutscene models the original per-update one (bleach_model_step). */\r",
+      "        ctx->gpr[9] = (uint32_t)bleach_model_step((uint32_t)ctx->gpr[31],(int32_t)ctx->gpr[9]); /* per tick, original or exact step */\r",
+      "        bleach_anim_log('s',(uint32_t)ctx->gpr[31],(int32_t)ctx->gpr[9],(uint32_t)vm_read64(ctx->gpr[1] + 0xA0));\r"
+     ]
+    },
+    {
+     "linha": 8503,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        /* HAND EDIT: advance by the step for the ticks this run covers -- the actor stores a per-tick step,\r",
+      "         * cutscene models the original per-update one (bleach_model_step). */\r",
+      "        ctx->gpr[9] = (uint32_t)bleach_model_step((uint32_t)ctx->gpr[31],(int32_t)ctx->gpr[9]); /* per tick, original or exact step */\r",
+      "        bleach_anim_log('s',(uint32_t)ctx->gpr[31],(int32_t)ctx->gpr[9],(uint32_t)vm_read64(ctx->gpr[1] + 0x90));\r"
+     ]
+    },
+    {
+     "linha": 8838,
+     "remover": 1,
+     "sha": "e57a6d99285cb2becc90e120dee28e5e2e8e25b0d1e96fc7140f0daff6f8dda0",
+     "inserir": [
+      "        vm_write32(ctx->gpr[9] + 0x1C, ctx->gpr[11]); bleach_model_step_written((uint32_t)ctx->gpr[9],1); /* HAND EDIT: original step */\r"
+     ]
+    },
+    {
+     "linha": 8848,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        bleach_model_step_written((uint32_t)ctx->gpr[3],2); /* HAND EDIT: the seek runs the script with exact steps */\r"
+     ]
+    },
+    {
+     "linha": 8891,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        bleach_model_step_written((uint32_t)ctx->gpr[27],1); /* HAND EDIT: back to the original step */\r"
+     ]
+    },
+    {
+     "linha": 8907,
+     "remover": 1,
+     "sha": "733e0bc44d65c83b64808a2a8a453971029bf1f394d3a114c620d0840885abe7",
+     "inserir": [
+      "        vm_write32(ctx->gpr[27] + 0x1C, ctx->gpr[0]); bleach_model_step_written((uint32_t)ctx->gpr[27],1); /* HAND EDIT: original step */\r"
+     ]
+    },
+    {
+     "linha": 8925,
+     "remover": 1,
+     "sha": "e57a6d99285cb2becc90e120dee28e5e2e8e25b0d1e96fc7140f0daff6f8dda0",
+     "inserir": [
+      "        vm_write32(ctx->gpr[9] + 0x1C, ctx->gpr[11]); bleach_model_step_written((uint32_t)ctx->gpr[9],1); /* HAND EDIT: original step */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_036.cpp": {
+   "antes": "b6b737947497988855db8818db6cbd49c67d81864287fb340691e389edb2daf5",
+   "depois": "5c888d857004bea05a138c704557c8022c17990cbe1b331bcbdeb60c80f1457f",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" double bleach_aspect_widen(double);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 12275,
+     "remover": 1,
+     "sha": "df52ebb65391549cc2ec61ff8f0b834cdd5e2f6fd819475ad864d4c4f7da00fb",
+     "inserir": [
+      "        { float ftmp = (float)(ctx->fpr[28] * bleach_aspect_widen(ctx->fpr[27])); uint32_t tmp; memcpy(&tmp, &ftmp, 4); vm_write32(ctx->gpr[29] + 0x0, tmp); } /* HAND EDIT: ultrawide Hor+ (m00 / k) */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_039.cpp": {
+   "antes": "bbec4fd01907e934496a2af865a8fbb14a131d3f2b7309f03b831ba5952ab7e4",
+   "depois": "a6ffe32175bbb905a28096fdcff91f93351ddf54de78486be05b8c7f8574390a",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" void bleach_anim_log(char, uint32_t, int32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 9738,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        bleach_anim_log('a',(uint32_t)ctx->gpr[3],(int32_t)ctx->gpr[5],(uint32_t)ctx->lr); /* BLEACH_ANIM_LOG hand edit */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_040.cpp": {
+   "antes": "94be848660c052a7618686d1b693cb415f836e8ac4e773cce0f3396941785b4d",
+   "depois": "3bb169cb6074cbe13c10aea1bef7a58b23c8601120fb4d9fdd9de9341e22676e",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_041.cpp": {
+   "antes": "ff3b86f753203494dc1061dac6ebd9ea25ff46142f76d5a85c12e81440fdce85",
+   "depois": "c19b306870371cf11be6f809a2e35608528edaa5ddebbfd5ea6d09468e4e4ae2",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 8369,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    },
+    {
+     "linha": 15347,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_042.cpp": {
+   "antes": "4228da32ca4d391aa35176ecded3d48431e3fdbe099f7fed9b763b0b03835a2e",
+   "depois": "62d857560c082af0a6de765ab4d115460b30337d51d9c972be1b59deaed6b63c",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 3818,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_045.cpp": {
+   "antes": "cd308798e5e07d4b2aad78ff9a3f1f2344abf15c1cfbb7ce037e8c97623ec0d2",
+   "depois": "8c17490cefe26bf787fe3c04dd09696112c9879f78021692fb2dbb859325fbd2",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_046.cpp": {
+   "antes": "b6686e85a09a5d61238fd48723a83b3213d9ab4699b347467f22be393e14c221",
+   "depois": "9551da0556b21fe3a4fdb85833121e0f9ea144e1066e02b402b4376d38008add",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_047.cpp": {
+   "antes": "5e769eaf61dc3420ca90bc8ca50fd4fbf58c5cf28ceceedf835ae16895d4fbbf",
+   "depois": "00749f45e1758591a13056ef463b6880eb7d9e17a69bf8a1ad7e86affa8b8ce8",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_049.cpp": {
+   "antes": "750e73c1e4af5bef73e920b651c89e633d730fc800e303ee6b789b73f3dfcaf2",
+   "depois": "455b2236ba480844aa523ab1dd0a9cfc22c5990de33095d80de6d7d7a77041b9",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" int32_t bleach_rate_count(double, uint32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 9472,
+     "remover": 1,
+     "sha": "b1d7e6c4859c58be98f2575e8bc16ca47254221e018ddba6ae91918f5bcbb382",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[31], (uint32_t)ctx->gpr[31], 0x002FF2C0) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[31], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 9496,
+     "remover": 1,
+     "sha": "70cef14a91330ae7b44c1137c5e6a327e1fa8ef518bd03ab7dde43a3c8c33080",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[1], (uint32_t)ctx->gpr[31], 0x002FF318) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[1], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 9529,
+     "remover": 1,
+     "sha": "b1d7e6c4859c58be98f2575e8bc16ca47254221e018ddba6ae91918f5bcbb382",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[31], (uint32_t)ctx->gpr[31], 0x002FF394) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[31], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 10226,
+     "remover": 1,
+     "sha": "70cef14a91330ae7b44c1137c5e6a327e1fa8ef518bd03ab7dde43a3c8c33080",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[1], (uint32_t)ctx->gpr[31], 0x002FFCC4) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[1], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 12228,
+     "remover": 1,
+     "sha": "b1d7e6c4859c58be98f2575e8bc16ca47254221e018ddba6ae91918f5bcbb382",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[31], (uint32_t)ctx->gpr[31], 0x003017A8) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[31], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 12252,
+     "remover": 1,
+     "sha": "70cef14a91330ae7b44c1137c5e6a327e1fa8ef518bd03ab7dde43a3c8c33080",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[1], (uint32_t)ctx->gpr[31], 0x00301800) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[1], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 12285,
+     "remover": 1,
+     "sha": "b1d7e6c4859c58be98f2575e8bc16ca47254221e018ddba6ae91918f5bcbb382",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[31], (uint32_t)ctx->gpr[31], 0x0030187C) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[31], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 12329,
+     "remover": 1,
+     "sha": "70cef14a91330ae7b44c1137c5e6a327e1fa8ef518bd03ab7dde43a3c8c33080",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[1], (uint32_t)ctx->gpr[29], 0x00301910) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[1], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 13238,
+     "remover": 1,
+     "sha": "70cef14a91330ae7b44c1137c5e6a327e1fa8ef518bd03ab7dde43a3c8c33080",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[1], (uint32_t)ctx->gpr[31], 0x00302504) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[1], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 15387,
+     "remover": 1,
+     "sha": "70cef14a91330ae7b44c1137c5e6a327e1fa8ef518bd03ab7dde43a3c8c33080",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[1], (uint32_t)ctx->gpr[31], 0x003041F8) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[1], &iv, 8); }\r"
+     ]
+    },
+    {
+     "linha": 15419,
+     "remover": 1,
+     "sha": "70cef14a91330ae7b44c1137c5e6a327e1fa8ef518bd03ab7dde43a3c8c33080",
+     "inserir": [
+      "        { int64_t iv = (int32_t)bleach_rate_count(ctx->fpr[1], (uint32_t)ctx->gpr[29], 0x0030425C) /* HAND EDIT: rate count */; memcpy(&ctx->fpr[1], &iv, 8); }\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_050.cpp": {
+   "antes": "bca835469d13e965f8b0c58f77dd626a1dcc8fb0e2a8c2cfb1ae65497828e787",
+   "depois": "acf02f8ded30a47df6070f05012b89f7e92146feffc55dd8828a9da3dc4dfe4a",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" int32_t bleach_per_update(int32_t, uint32_t);\r",
+      "extern \"C\" int32_t bleach_event_step(int32_t, uint32_t);\r"
+     ]
+    },
+    {
+     "linha": 2688,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[3] = (int64_t)bleach_event_step((int32_t)ctx->gpr[3], (uint32_t)ctx->gpr[31]); /* HAND EDIT: event timeline step per tick */\r"
+     ]
+    },
+    {
+     "linha": 14478,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        ctx->gpr[5] = (int64_t)bleach_per_update((int32_t)ctx->gpr[5], (uint32_t)ctx->gpr[3]); /* HAND EDIT: a constant animation step per original update, not per tick */\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_051.cpp": {
+   "antes": "7168f29f0da3a91b03383acadd1f765895bad4b8b4238244e1e2329d61ce9c36",
+   "depois": "b9ea6e550759452c6abad206989a40032e9c4894beb3a7160f7b9463f8940a84",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r"
+     ]
+    }
+   ]
+  },
+  "recompiled/ppu_recomp_053.cpp": {
+   "antes": "47725888a228bece483ec3e0b911a47ecabefbd8a15a0006a54e6b06a6cc2929",
+   "depois": "49ba94b0adc66a21e03fc5a20e27dcc3139136b7702bb56dff9db58a88761c87",
+   "trechos": [
+    {
+     "linha": 3,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "extern \"C\" uint32_t bleach_clock_f32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i32(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i16(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" uint32_t bleach_clock_i8(uint32_t, uint32_t, uint32_t);\r",
+      "extern \"C\" int bleach_engine_call_decimated(uint32_t);\r",
+      "extern \"C\" int bleach_half_call_enter(uint32_t);\r",
+      "extern \"C\" void bleach_half_call_leave(int);\r"
+     ]
+    },
+    {
+     "linha": 8870,
+     "remover": 0,
+     "sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "inserir": [
+      "        /* BLEACH_CALL_HALF hand edit: per-tick face/secondary-animation clock (+0x74 counter vs\r",
+      "         * +0x78 threshold, fixed 0x1000 animation step); 30 Hz cadence when the sim runs at 60. */\r",
+      "        if (bleach_engine_call_decimated(0x0033B870)) return;\r",
+      "        /* HAND EDIT: runs as a 30 Hz task while BLEACH_CALL_HALF holds it back. */\r",
+      "        struct HalfCall { int was; HalfCall():was(bleach_half_call_enter(0x0033B870)){}\r",
+      "                          ~HalfCall(){bleach_half_call_leave(was);} } half_call;\r"
+     ]
+    }
+   ]
+  },
+  "fonts/libfont/ppu_recomp.h": {
+   "antes": "8b63fa2e946dc1591099a8ad42aa8c5eff78d651dd3c08ad01f64ffbfa6b3d7a",
+   "depois": "a4fe20cc599da9ef48c1a16c861f602f7c68e598e279696a4e7be8ffb43bb9c4",
+   "trechos": [
+    {
+     "linha": 160,
+     "remover": 73,
+     "sha": "af29d871dee32882f03c05ea5d103f267dde0eded26a846a834668b8065d6445",
+     "inserir": []
+    },
+    {
+     "linha": 238,
+     "remover": 4,
+     "sha": "583414c474a7c61682382caa9f120e13ed67cb421814c1a5120e650b52f7e232",
+     "inserir": []
+    }
+   ]
+  },
+  "fonts/libfontFT/ppu_recomp.h": {
+   "antes": "ce2e8458ccf75f322762575c1af7bb73f52933a88e185d1c6da5b28bccaf3722",
+   "depois": "80212b3950ba1eced6fa43f1e95993e31bb91bbed0f3f8de09273c20079a2298",
+   "trechos": [
+    {
+     "linha": 160,
+     "remover": 73,
+     "sha": "af29d871dee32882f03c05ea5d103f267dde0eded26a846a834668b8065d6445",
+     "inserir": []
+    },
+    {
+     "linha": 238,
+     "remover": 4,
+     "sha": "583414c474a7c61682382caa9f120e13ed67cb421814c1a5120e650b52f7e232",
+     "inserir": []
+    }
+   ]
+  },
+  "fonts/libfreetype/ppu_recomp.h": {
+   "antes": "2be89060059943a515a2e3a4989b5788ef58848666eb410303c250897fbd54b2",
+   "depois": "00a87f107287eec6a884cfe8a2523b45307c60d94fbe85aea90d7695710b61e7",
+   "trechos": [
+    {
+     "linha": 160,
+     "remover": 73,
+     "sha": "af29d871dee32882f03c05ea5d103f267dde0eded26a846a834668b8065d6445",
+     "inserir": []
+    },
+    {
+     "linha": 238,
+     "remover": 4,
+     "sha": "583414c474a7c61682382caa9f120e13ed67cb421814c1a5120e650b52f7e232",
+     "inserir": []
+    }
+   ]
+  },
+  "fonts/libresc/ppu_recomp.h": {
+   "antes": "67ed38354a1a0e6bb49ed02936d64622f40effaf68916ec3178fbbba58ec49dd",
+   "depois": "4c934f032cad7067d88715b957bd14763f81afbb596156f00f83cd458f3709c8",
+   "trechos": [
+    {
+     "linha": 160,
+     "remover": 73,
+     "sha": "af29d871dee32882f03c05ea5d103f267dde0eded26a846a834668b8065d6445",
+     "inserir": []
+    },
+    {
+     "linha": 238,
+     "remover": 4,
+     "sha": "583414c474a7c61682382caa9f120e13ed67cb421814c1a5120e650b52f7e232",
+     "inserir": []
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,79 @@
+Native vertex input packets — optional RSX_NATIVE_VERTEX_PULL=1
+
+Purpose
+The existing CPU decoder reconstructs a float4 for every used attribute of
+every referenced vertex. The new path uploads the original formats plus an
+explicit description, and the vertex shader performs fetch/conversion. It
+removes the per-vertex CPU conversion loop, not the game's skinning, culling
+or complete geometry producer. Default remains0 until clean evidence exists.
+
+Ownership boundary
+rsx_vertex_pull_prepare consumes a prepared rsx_vertex_fetch_plan and the
+same remapped references/count used to prepare it. All mapped spans must stay
+valid and stable until rsx_vertex_pull_write finishes. Only write borrows
+source pointers. Its result contains owned bytes: header, reference pairs,
+and merged source spans. Overlapping interleaved attributes share one copied
+span. Metadata uses the host little-endian ABI, source values stay big-endian.
+The packet belongs to the existing frame/submission resource until its real
+fence completes. No GPU access to guest pointers and no new readback/fence.
+This is a submission-owned packet, not yet a persistent cross-frame mesh.
+
+Header v1:16 bytes (version,count,mask,refs_offset), then16 attribute records
+of48 bytes (dataoffset,stride,first,last,type,size,frequency,modulo,defaultfloat4).
+Reference pairs are uint32 vertex_id/base_index. Packet and copied spans align
+to16 bytes; tail padding makes aligned byte loads safe without source overread.
+Only validated mapped source bytes are copied. Oversize, unsupported or unmapped
+plans decline unchanged; the existing CPU decoder retains its per-attribute
+fallback and invalid-position behavior. Inline index bounds are checked before
+acceptance. CPU remapping, restart cuts and topology expansion remain intact.
+
+GPU contract
+ByteAddressBuffer t20 is a vertex-only root SRV, bound to this packet. The
+generated vertex program is retained as rsxp(); a main(SV_VertexID) wrapper
+loads its exact input mask. A distinct pipeline-key mode and HLSL source keep
+CPU and GPU input pipelines separate. The GPU applies the original20-bit
+base-index wrap, frequency divide/modulo, component defaults and byte order.
+All seven RSX formats are supported. Half subnormals preserve the existing
+decoder's signed-zero rule; signed normalized minima are not newly clamped.
+Normalized division can differ by ordinary float rounding; integer/float/half
+bit patterns are otherwise preserved by the decoder test. No approximation of
+pose, visibility or simulation is introduced.
+
+Direct3D root SRVs support untyped ByteAddressBuffer but do not provide bounds
+metadata. Therefore the CPU plan establishes the legal spans and the shader
+checks vertex/element ranges before fetching. The input-assembler index range
+comes from the already validated CPU remap/topology path.
+Primary reference:
+https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-descriptors-directly-in-the-root-signature
+
+Diagnostics and validation202
+RSX_DRAW_CSV and RSX_A010_GEOM retain the CPU path because they explicitly
+capture expanded CPU geometry. Other diagnostic attribute access can decode
+an individual attribute on demand. Frame captures do not disable GPU inputs.
+The production numerical decoder passed524,288 components against the existing
+CPU fetcher:498,875 bit-exact,25,413 normalized components within relative
+1.2e-7 (absolute floor1.2e-7). Coverage:seven formats,1–4 components, unaligned
+sources, disabled defaults, frequency divide/modulo,20-bit index wrap, shared
+spans and failed-capacity/mapping fallback. Packet source/ref memory is
+destroyed before GPU execution to test lifetime independence. Both zero-input
+and full-input VS wrapper signatures compile. Eight production-renderer frames
+passed with two recording slots, changing constants/code/scissor and16 actual
+GPU-input draws,0declines. Live audit and clean benchmarks are separate gates.
+
+Remaining work
+Measure the net change including metadata/copies and GPU work. Long-lived mesh
+buffers and versioned pose data must eventually avoid rebuilding packets, but
+must preserve source changes, per-view indices, culling and publication. This
+implementation does not claim to solve the entire simulation/render split.
+
+Clean results203/204/205 (same executable62d0c1d34a710cafaa70ce08af8ce0ef798326d087e260c75113019a9497ec37)
+CPU reference204:78.2222FPS. GPU input203:79.5000FPS; repeat205:79.8889FPS.
+Net+1.6335..2.1307%,0.2055..0.2667ms/frame saved. p95/p99 both improved in
+these runs. Two ON runs, one OFF; same18-second scripted route, not confidence
+intervals or full-game validation. All presents have new draws/completions.
+Sampled CPU fetch1.3803->0.7362ms, total drawCPU3.4380->2.8505ms; GPU2.6007->
+2.5916ms. Nested/overlapping service costs cannot be summed or treated as net.
+Audit202:9,416,353 GPU-input draws,0declines,10,061 submissions completed,
+no extra actor position changes. Sixstills reviewed, not motion-shadow approval.
+Use skinning2/vertex-pull1 as next experimental baseline, explicit0 control.
+Production defaults and delivered user package unchanged. Goal120FPS still open.

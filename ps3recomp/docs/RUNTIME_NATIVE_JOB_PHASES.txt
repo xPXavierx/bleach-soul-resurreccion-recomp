@@ -1,0 +1,126 @@
+Native private-compute / ordered-publication executor (experimental)
+
+Purpose
+Separate host compute capacity from the original SPURS resource identities.
+More CPU workers do not grant additional concurrent ownership of guest rings,
+labels, completion state or other resources indexed by SPU number.
+
+spurs_native_batch.h
+A title adapter may install accept/execute before workers start. Accept is
+read-only and must reject unknown images/list contracts before execution.
+The ordinary job scheduler remains the default. Accepted lists still reserve
+eligible original lanes against policy modules and other chains. Original
+workers sleep while their lane is native_reserved, including spurious wakes.
+The scheduler releases its instance lock while execute runs. Execute must
+drain all admitted jobs synchronously before returning. Only then are lanes
+released and the chain allowed past its list/completion boundary.
+
+native_phase_pool.h
+Process-independent scheduling primitive; no game addresses or SPU image IDs.
+An admitted task receives index%nlanes and the ordered ticket index/nlanes.
+Private work can run on more host workers than lanes. shared_begin acquires
+that lane's ticket before the FIRST shared access. Ownership persists until
+the entire task callback returns, including output publication and completion.
+No-op jobs also advance their ticket in order. Admission and cancellation
+checks share the queue lock, so cancellation drains a contiguous prefix and
+cannot leave a missing ticket blocking later admitted tasks.
+
+One pool serializes batches. Its destructor waits for its current batch and
+joins workers. The Bleach host currently uses process-lifetime services and
+does not call the destructor from atexit: other guest services can still be
+running during process exit. Do not claim full service teardown has been
+implemented. A host with explicit lifecycle shutdown should first quiesce
+producers, cancel admission, drain consumers, then destroy the pool.
+
+Execution boundary
+g_spu_shared_access_begin is separate from read-only diagnostic hooks.
+spu_channels calls it before MFC command issue/list resume and before non-MFC
+channel reads/writes/counts, except RdMachStat (local interrupt-enable state).
+It may block. The callback must be installed before workers and is NULL by
+default. These boundaries do not capture arbitrary direct guest-memory access
+in custom kernels. A title adapter must establish that its private phase only
+uses private storage and stable declared inputs; this is not a universal proof
+for arbitrary SPU code or self-modifying images.
+
+Bleach adapter
+BLEACH_GEOMETRY_WORKERS=0 or unset retains the ordinary pool. Explicit values
+1..32 enable the experimental executor. Acceptance requires an independent
+256-byte JOBLIST with the audited geometry image content fingerprint and
+descriptor layout. Audio, completion jobs and unknown layouts fall back before
+execution. Inputs are staged into private stores by the existing job runner;
+the adapter does not eliminate input staging or change float arithmetic.
+The lease spans GETLLAR through PUTLLUC and subsequent output writes. Protecting
+only the store would lose allocator updates. FIFO publication also prevents
+later tasks filling an output ring ahead of an earlier consumer dependency.
+
+Validation
+tests/test_native_phase_pool.cpp drives eight private workers through four
+ordered lanes, with delayed earlier tasks, two-slot rings and a consumer that
+requires original job order. Payloads must match exactly through repeated
+wrap. It checks no duplicates/missing work, exclusive same-lane ownership,
+cancellation during work, pre-cancellation, empty/no-shared-access tasks, pool
+reuse and joined shutdown. These tests do not substitute for title-level
+render/physics validation, instance lifecycle tests or clean FPS comparisons.
+
+Performance
+Select worker capacity by measured frame critical path, not total CPU usage.
+Ticket waits, heterogeneous cores and renderer costs can erase the ideal gain.
+Keep the feature opt-in until comparative gameplay, output ownership and
+visual validation pass. Unknown titles require their own contracts and tests.
+
+Next structural boundary: native results, not captured execution contexts
+The pool only schedules existing work; it does not make repeated geometry
+computation disappear. A reusable native result contract must separate:
+- Mesh/pose inputs: owned immutable bytes or producer generations with a
+  proved write/lifetime protocol. Guest addresses alone are not identities.
+- Geometry results: typed buffers owned by the host, independent of the job's
+  local-store addresses, stack, registers, original lane and output ring.
+- Per-view results: camera/viewport/culling inputs can invalidate primitive
+  selection without requiring every mesh buffer to be regenerated.
+- Publication: allocation, labels, guest command streams and completions keep
+  their required order even when a computation result was already available.
+- GPU consumption: retaining a result also retains its buffers; replacing or
+  recycling them waits for all consuming submission fences.
+
+These are requirements for the next adapter, not implemented result reuse.
+An input-content fingerprint is only a candidate lookup. Validate complete
+dependencies and compare the owned input bytes or proved generations. Include
+format/size/flags, arithmetic mode and stage version. Additional reads during
+execution must be captured as dependencies or decline reuse before any work
+is skipped. Partial/unknown layouts retain the original path.
+Do not restore saved GPR/LS images from another invocation: pointer-bearing
+state, return addresses and publication metadata belong to that invocation.
+Do not substitute an old command buffer merely because its vertices match.
+Validate a native phase against exact reference outputs, preserving side
+effects, then measure the complete clean frame. A large fraction of repeated
+tasks does not imply an equally large FPS gain.
+
+Bleach read-only dependency audit (title-side, experimental)
+BLEACH_GEOMETRY_INPUT_AUDIT=start_ms:duration_ms:absolute_path captures up to
+32768 already-staged private geometry jobs. Optional INPUT_EXACT=1 (full env
+name BLEACH_GEOMETRY_INPUT_EXACT) owns normalized input snapshots in1024
+bounded entries and compares actual bytes after a fingerprint lookup.
+The fingerprints exclude input source addresses and publication fields; this
+normalization is diagnostic and is not yet a complete semantic cache key.
+Execution tokens are observations at begin/end, not producer-frame ownership.
+
+GEOAUD1 records are1328 bytes; GEOAUD2 records are2008 bytes. Both have a
+24-byte little-endian header: magic[8], record_bytes:u32,count:u32,QPC_frequency:u64.
+V2 appends17 records of target:u32,return_pc:u32,count:u32,flags:u32,
+ticks:u64,private_ticks:u64,started:u64. Each selected call is at the root
+job's call site; drained continuations are inside the same interval. Every
+duplicate lifted body receives the hook. Calls are not replaced or reordered.
+The parser verifies that their sum does not exceed a complete job's interval.
+
+Input hashing/exact comparisons happen before the job begin timestamp.
+Output hashing and phase timestamp overhead are inside its duration. Thread
+preemption is included; this is elapsed time, not thread CPU time. The record
+array uses about63MiB with V2; the optional exact table owns up to1024 payloads
+of at most one local store plus168 metadata bytes each (about256MiB logical
+payload; vector capacity/allocation overhead can be larger). Admission is
+bounded. The harness closes its window well after the bounded capture ends;
+all32768 admitted records were complete in183. This is not a general worker
+shutdown protocol; partial captures require checking header/record agreement.
+Keep diagnostic runs
+separate from clean FPS runs. Never use their apparent FPS as a performance
+claim or extrapolate another title's safe publication boundary from this one.

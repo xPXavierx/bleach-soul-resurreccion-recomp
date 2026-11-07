@@ -1,0 +1,81 @@
+Owned typed skinning results (experimental mode3)
+
+native_skinning_result.h separates the portable buffer contract from the FMA
+implementation. native_skinning_result.cpp accepts this contract, a calculation
+version and a pure callback. Inputs are complete original positions, influences
+and the declared palette span. Outputs are transformed positions and per-vertex
+frames. Guest addresses, GPRs and local-store scratch are not identity or output.
+
+On a miss, an exclusively leased slot owns copies of all inputs and a separate
+output area. The native callback computes directly into that output storage.
+The result remains available after the invocation. On a hit, every input byte,
+size, arithmetic control and version is checked before copying outputs to the
+current invocation's destinations. A content hash only selects candidates.
+Actual guest publication, completions and final-pair state reconstruction remain
+in the title adapter. This is a bridge to persistent geometry ownership, not
+yet a GPU buffer lease or a native render snapshot implementation.
+
+Lifecycle and synchronization
+32 shards,64 slots each;2 MiB buffer reservation per shard. Total buffer budget
+is64 MiB, including in-flight reservations. Entry metadata, cache base objects
+and allocator overhead are additional. Allocations are rounded to4 KiB; slots
+reuse their allocations when capacity suffices. LRU removes resident results
+and releases capacities as needed. Busy slots cannot be read, overwritten or
+evicted. No lock is held while copying inputs or calculating a miss. Cache hits
+hold the shard lock during exact input comparison/output copies. If no slot or
+budget is available, calculate directly with no caching. Process-lifetime cache
+avoids teardown races; explicit reset requires no live calls. Allocation failure
+releases the reservation and falls back without touching another worker's lease.
+
+Caller obligations
+Validate every input/output span, palette index, count and alias relationship.
+Keep inputs stable during the call. Outputs must not alias read-only inputs or
+each other; positions are intentionally in/out. All exceptions must be masked.
+Callback must return normally: no exception/longjmp/I/O, retaining borrowed
+pointers or changing arithmetic control. Results must be independent of incoming
+sticky FP flags. These conditions are true for the extracted skinning callback,
+but are not an automatic purity guarantee for arbitrary code.
+
+Floating environment
+Identity includes all MXCSR control bits, but not incoming sticky flags. A miss
+clears only the sticky flags before the pure callback, records the flags raised,
+then restores incoming flags OR raised flags. A hit applies the same OR to this
+call's incoming environment. The native skinning callback does not consult flags
+or change controls. Thus rounding, exception masks and output bits are preserved
+while equivalent geometry can be shared across callers with different flags.
+Unexpected control changes decline publication of a reusable result.
+
+Bleach mode3 preserves mode2 bounded arithmetic, the span/format/alias gates,
+fresh pointer updates, and the final original pair. Exact checks compare every
+GPR/local-store byte and MXCSR against the original lifted loop. The default
+remains off; mode2 is the current measured experimental reference until mode3
+has clean net-performance evidence. Neither counts of hits nor raw vertices
+reused alone establish an FPS improvement.
+
+Validation199
+The title-derived differential corpus passed2,304 cases, including real kernel
+misses/hits with changed incoming flags, extended/denormal/boundary floats and
+full architectural state comparisons. The generic storage test additionally
+covers all64 incoming flag combinations, mutations at the end of each input,
+control/version changes, eight concurrent workers, budget pressure/eviction,
+and quiescent reset. See live audit and clean results separately.
+
+Live audit199 and net comparison200/201
+Audit199 passed72,495 exact GPR/local-store/MXCSR comparisons and completed
+10,337 submissions with zero pending. Six stills show character/scene/tutorial
+and one fade frame; these do not approve continuous shadows or interpolation.
+Same executable SHA256
+14ffb227aab1dfb0901050e0be3bf7360d189b6b3518dfc57c6d48dc2892b875:
+  mode2 reference201:78.6111 FPS, p9513.6884ms, p9915.8782ms;
+  mode3 experiment200:79.7222 FPS, p9513.5427ms, p9916.1560ms.
+Observed net difference +1.4134%,0.1773ms/frame saved; one clean run per mode,
+same18-second route, not deterministic replay or statistical confidence.
+Mode3 reused93.87% of batches and95.97% of its vertices, but that fraction is
+not a percentage of frame cost removed. Input comparison, copies and locks
+remain; the original producer and downstream geometry still execute.
+Keep mode2 as the experimental reference. Mode3 is opt-in, not promoted from
+this small unreplicated difference with a worse p99. Do not spend the next
+optimization cycle tuning its size/hash parameters. The next contract must
+span full geometry computation, persistent data lifetime through all consumers
+and publication, and draw preparation; isolated skinning cannot close the gap.
+Reports: outputs/Revisao-estrutural/skinning-persistente-199-201.txt/json.

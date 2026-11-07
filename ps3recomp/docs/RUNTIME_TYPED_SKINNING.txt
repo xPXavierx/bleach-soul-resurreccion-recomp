@@ -1,0 +1,77 @@
+Typed cyclic four-influence skinning (experimental)
+
+runtime/spu/spu_skinning_cyclic4.h implements a direct native calculation over
+palette, influences, positions and output frame arrays. It has no guest context,
+cache, heap allocation, per-access instrumentation, publication or scheduler.
+The adapter owns allocation/lifetime and validates the complete spans first.
+
+Input contract
+- AVX2/FMA dispatch and caller-owned MXCSR RTZ + DAZ + FTZ, masked exceptions.
+- Serialized arrays contain big-endian float bit patterns.
+- Each vertex has four consecutive (uint8 weight, uint8 palette index) pairs.
+- Each palette entry consists of three float4 vectors (48 bytes), arranged as
+  cyclic diagonals [m00,m11,m22,tx], [m01,m12,m20,ty], [m02,m10,m21,tz].
+- Weight conversion uses the exact original scale bits0x3b808080, retaining
+  multiply/FMA accumulation order. Extended-range SPU floats retain the SDK's
+  integer exceptional-lane path. This is not ordinary unchecked IEEE skinning.
+- Position arrays contain float4. Writes replace the transformed position and
+  produce three blended cyclic vectors, with fourth components1,0,0, for later
+  normal/tangent processing. No world/view culling or publication is skipped.
+- Read-only arrays must not alias the output position/frame spans. Palette
+  indices and all input/output sizes must be validated by the adapter.
+
+Bleach adapter
+native_skinning.h receives the proven four-influence loop entry, validates
+its format constants, private-LS ownership, counts, pointers, full buffer ranges
+and aliases, and invokes the typed kernel for all but the final two vertices.
+It advances the original pipeline's pointer/count vectors and re-primes its
+prefetched inputs. The final original pair reconstructs all observable register
+temporaries and exact lookahead values. Thus integration still preserves the
+entire GPR/LS/FP environment, without relying on a guessed caller ABI.
+This final pair is an explicit transitional boundary. The native calculation
+itself has typed buffer arguments and can later target host-owned storage once
+the consumers' ownership contract is extracted. Persistent buffers and GPU
+skinning are not yet implemented by this header.
+
+Generation locates the outlined four-influence loop in the original promoted
+phase. All reference bodies stay unchanged. Whole-phase consolidation and the
+owned-result experiment are independent options and remain disabled. The title
+opt-in is BLEACH_NATIVE_SKINNING=1, with BLEACH_NATIVE_SKINNING_VERIFY=N for
+sampled exact comparisons. Default is OFF until clean net-performance tests.
+Unknown formats, invalid ranges/aliases, non-FMA selection or active capture
+keep the original path before modifying state.
+
+Validation
+work/test_native_skinning.py derives the original setup and loop from the user's
+lifted game source; no hand-written imitation is used as the differential oracle.
+It verifies1,152 deterministic randomized cases with batch sizes4..256, random
+upper register lanes, finite/subnormal/extended floats, and compares the entire
+register file, local store and MXCSR. Aliasing, changed format constants and
+small batches are rejected without changing state. Values at the2^60 interval
+boundary with maximum weights also compare exactly. Live coverage and clean
+performance results are recorded separately; unit tests alone do not establish
+the full game's correctness, visual quality or net FPS.
+
+Batch arithmetic domain (mode2)
+BLEACH_NATIVE_SKINNING=2 checks the palette/position bit patterns once per
+batch. If every absolute value is at most B=2^60, each weight lies in[0,1],
+each blended component is bounded by4B and each transformation accumulator by
+16B^2=2^124. Round-toward-zero cannot increase these absolute bounds. Thus no
+intermediate can overflow IEEE or reach SPU's extended exponent range.
+The bounded variant removes per-operation exponent/overflow checks but retains
+RTZ,DAZ,FTZ and positive-zero normalization after EVERY multiply/FMA. The
+arithmetic body is shared in spu_skinning_cyclic4.inl so operation order does
+not diverge. Any value outside the domain selects the checked implementation.
+The API carries the validated palette entry count; the title already validates
+all spans/indices/aliases. No result cache or dynamic memory tracing is used.
+
+Mode1 audit192 passed69,314 exact comparisons and completed10,049 submissions.
+Clean193/194 observed75.78FPS on versus75.61FPS off, only+0.22% (0.029ms).
+One run per mode: treat this as no demonstrated meaningful speed improvement.
+The typed boundary is useful for domain validation and future ownership, but
+is not by itself evidence that a native-looking rewrite runs faster.
+Mode2 audit195 passed72,276 exact GPR/LS/MXCSR comparisons, completed10,334
+submissions, and used bounded arithmetic in6,170,482 of6,787,461 accepted batches.
+Clean same-binary196/197 observed79.22FPS enabled versus75.94FPS disabled,
++4.32% /0.545ms perframe. p95 improved14.075->13.527ms. A repeat clean run198
+is recorded separately. This is one route, not full-game/120FPS acceptance.

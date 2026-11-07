@@ -1,0 +1,83 @@
+Ordered native recording — experimental Windows backend
+
+rsx_native_recording.h separates CPU preparation from D3D12 command recording.
+RSX_NATIVE_RECORDING=1 enables one worker; default0 retains synchronous use.
+The producer owns guest decoding, geometry fetch, shader/resource preparation,
+uploads and cache mutation. The consumer alone records prepared draws and
+auxiliary commands and owns the command-list binding cache. This does not
+replace the full SPU geometry producer or implement pose/camera interpolation.
+
+Protocol and ownership
+- Draw packets and copy locations, barriers, clear colors, viewports, scissors,
+  root constants and bindings are copied into value records. No stack argument
+  or dispatcher/vertex scratch pointer crosses the queue boundary.
+- Resource pointers, mapped upload bytes and GPU descriptors remain leased
+  through the existing frame/submission lifetime. CPU recording completion is
+  NOT GPU completion and does not acknowledge guest fences or free GPU data.
+- Before Close/ExecuteCommandLists, the CPU drains all earlier recording work.
+  Existing actual GPU fences still govern allocator/ring/texture retirement.
+  Reset and destruction cannot race the recorder. Query operations are ordered
+  with the draws/copies they measure.
+- CPU RTV/DSV descriptor replacement drains pending reads and invalidates the
+  recording cache's target bindings. Shader-visible tables already use separate
+  immutable submission slots. A partial cube upload's destination is retired
+  through the GPU fence rather than released while earlier copies reference it.
+- Auxiliary image transfers now update the same binding cache as normal draws;
+  raw state changes no longer bypass that ownership boundary.
+
+Queue
+A bounded SPSC ring stores392-byte records,4096 entries by default. The backend
+already serializes its preparation owner, including movie/guest handoffs.
+One publication per16 commands coalesces notifications; drains publish tails.
+The worker sleeps on a retained auto-reset event, without a polling spin loop.
+Interlocked publication/consumption orders entry access. Full capacity applies
+backpressure; no draw is dropped. The progress wait also observes worker death.
+The worker publishes consumed positions after finishing entry access, in batches
+of at most64. Shutdown drains, wakes, joins and then releases queue storage.
+
+RSX_RECORD_QUEUE_CAPACITY=32..4096 supports bounded pressure tests. It is not a
+performance-tuning recommendation. Only the implemented backend's command subset
+is represented (up to4 barriers,8 root constant words,4 color targets, no clear
+rectangles). Callers currently obey these bounds; unsupported extensions fail
+explicitly instead of truncating commands. Extend the protocol when introducing
+new backend operations. Other graphics backends are unchanged.
+
+Evidence available before performance decision
+test_native_recording.c calls the real queue/dispatcher against a slow mock
+command recorder: copied stack inputs, ordered constants/draws, ring wrap,
+capacity waits, drain and stop/restart in both modes.40,000 asynchronous
+commands consumed across two cycles;1,248 capacity waits in the recorded run.
+This test is about CPU command order, not GPU completion.
+
+Production GPU tests with capacity32:8 shader/constant/scissor checks,
+14 submission/resource/fence checks,4 depth-content checks all passed. The
+requested D3D validation layer was unavailable(0x887A002D); pixels and resource
+behavior were checked through readback, not by claiming validation-layer success.
+
+Gameplay audit212 completed10,450 submissions with no pending GPU work or
+position changes in render-only passes. Six stills retained player/scene/HUD
+and tutorial transition. Its postprocessor failed because the then-current
+recorder summary was emitted only on renderer destruction; the host exits from
+dump_present_samples. Build213 also emits the drained summary there. Audit212
+is retained with this missing evidence explicit, not marked as a full harness
+pass. Clean same-build performance comparisons are recorded separately.
+
+Microsoft documents the distinction between CPU descriptor consumption during
+recording and shader-visible descriptors used during execution:
+https://learn.microsoft.com/en-us/windows/win32/direct3d12/non-shader-visible-descriptor-heaps
+https://learn.microsoft.com/en-us/windows/win32/direct3d12/recording-command-lists-and-bundles
+
+Independent implementation; no Bloodborne/shadPS4 source incorporated.
+
+Performance checkpoint213–216
+Same executable, OFF/ON/ON/OFF, fixed18s115..133s scripted route. Controls
+mean77.00FPS; ONmean78.11FPS: +1.44%, 0.185ms.
+Both ONroutes consumed every queued recording command and retired all GPU
+submissions; no presents without new draws. Remaining gap to120FPS:4.469ms.
+The recorder is the next experimental baseline, still opt-in in the SDK.
+Preparation-side draw_cpu excludes worker recording cost. Whole-route worker
+time is not frame-critical savings. Do not add it to geometry or GPU timings.
+Next priority is complete native geometry, not queue-size tuning.
+User reported improved stability in the observed gameplay portion. This is
+qualitative feedback with unverified build identity, not causal proof or
+full-game/shadow/interpolation acceptance. No public package updated.

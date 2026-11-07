@@ -1,0 +1,79 @@
+Owned native computation results (EXPERIMENTAL; default OFF in Bleach)
+
+Scope
+runtime/spu/native_phase_result.h/.cpp implements reusable owned results for
+private deterministic calculations. It does not replace a job, restore another
+job's full context, or publish guest addresses/completions. The title executes
+its invocation-specific prologue, epilogue and publication each time.
+
+Contract, to be established by each title
+- Private local store, with no aliases to another worker or the register file.
+- All memory reads/writes go through the capture helpers. Their units are the
+  aligned 16-byte local-store access used by the lifted calculation.
+- An exact static live-in register set; partial writes include the old register.
+- Every actually executed register definition is marked, including branch paths.
+- Deterministic pure helpers and identical stage/version and floating environment.
+- The calculation returns normally. No longjmp, guest unwind, exception, I/O,
+  untracked memory access, or intermediate observer is permitted inside it.
+  Aborting a capture only prevents publication; it is not an unwind mechanism.
+Unsupported calls retain the original implementation before entering this API.
+Nested calls execute directly while the outer capture remains responsible for
+all accesses; nested diagnostic probes are unsupported.
+
+On a miss, record each local-store quadword's input before its first write and
+only if it was read. Compress the read and write sets into spans. The packet
+owns all dependency bytes, output bytes, input registers and actual register
+outputs. Incoming and final MXCSR include both control and sticky status flags.
+On a hit, compare ALL recorded input bytes/registers before applying ANY write.
+Only actual memory/register writes are applied. Untouched state stays current.
+A hash or title hint only selects candidates; neither authorizes reuse.
+
+The process-lifetime cache has 16 independently locked shards, 16 entries and
+4 MiB packet allocation capacity per shard, with LRU eviction. Packet capacity
+accounting includes vector capacities and packet metadata. Cache base objects,
+allocator overhead and approximately 266 KiB TLS capture scratch per active
+worker are extra. Locks are not held during computation. Reset requires all
+phase calls to have stopped. Duplicate misses may safely compute independently.
+
+Generator
+tools/spu_native_phases.py result_phase() splits an approved closed calculation
+between a unique prologue guard and epilogue label. CFG liveness supplies input
+registers; block-specific write marks avoid restoring values on untaken paths.
+The title proves that opaque helpers are unreachable under its entry gate;
+otherwise generation refuses reuse. An unexpected opaque helper aborts capture.
+No claim of general automatic purity, arbitrary SPU ABI or unwind safety.
+
+Bleach integration
+BLEACH_NATIVE_PHASES=2 enables the middle of 98E0/9908, after the 09974 stack
+guard and before A86C. Its live-in registers are 1,3,5,85,90,92,126, all 128 bits.
+Outer stack saves/restores execute fresh. The adapter excludes the AA40 mailbox
+path before entry. Version distinguishes the FMA and non-FMA implementations.
+The hint contains the header and palette prefix; all actual dependencies still
+undergo exact checks. BLEACH_NATIVE_PHASE_VERIFY=N compares entire GPR/local
+store, PC, status, trampoline, and (since diagnostic191) final MXCSR against the
+reference started with the same incoming MXCSR. Current default remains OFF.
+
+Validation and measured decision
+Audit188 passed 18,775 exact GPR/local-store comparisons and retired all 9,761
+submissions. Eleven C++ test groups cover dependency mutation, branch-dependent
+reads/writes, partial registers, floating environment, abort, eight workers,
+eviction, capacity bounds, reset and scoped timing accounting. Fourteen generator
+tests passed. These are not whole-game or motion-shadow validation.
+Clean same-binary runs189/190: 71.94 FPS enabled versus 75.83 FPS disabled,
+about +0.713 ms/frame overhead. The implementation is retained as experimental
+boundary/tooling, not promoted as an optimization. Cache hit count is not a
+performance improvement. Do not spend the next intervention tuning entry count
+or hash details without evidence of meaningful frame-critical cost.
+
+Diagnostic probes
+ps3_phase_result_probe_begin/end scope one call on the current worker. Durations
+separate lookup, setup, traced computation, collecting owned spans, publication
+and application, with input/output byte counts. Excluded early/fallback calls
+remain invalid samples. Timing is opt-in and includes timer overhead.
+BLEACH_NATIVE_PHASE_PROFILE=1 additionally times native/reference execution
+on differential checks in the 120..138 second window after phase initialization.
+It requires mode2 and a nonzero verification stride. Results are grouped by hit
+and miss. This is paired service-time evidence, not clean frame time: reference
+runs second on hot input, instrumentation changes costs, and workers overlap.
+Use the separate clean A/B tests for net FPS. Never add service times from
+overlapping workers or turn total cache hit percentage into percent FPS gain.

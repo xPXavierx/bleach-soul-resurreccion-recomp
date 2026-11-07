@@ -1,0 +1,55 @@
+Native D3D12 submission ownership (experimental, default one slot)
+
+Each ld_frame_resources owns its allocator/list, mapped upload/vertex/index
+and shader constant buffers, shader-visible descriptor heaps and cursors,
+retired textures, timing queries/readback, and last submitted GPU fence.
+Persistent images and their barriers belong to one ordered GPU command queue.
+Changing a recording slot never resets or frees the other slot's resources.
+
+rsx_live_draw_set_frames_in_flight(2) must run before renderer initialization.
+Only a presentation rotates slots. The CPU waits for the slot it will reuse,
+not necessarily the frame it just submitted. Explicit guest references,
+readbacks, movies and capacity flushes remain blocking; their fence also orders
+older work. Device removal is not completion. Live getters belong exclusively
+to the renderer thread. Changing slot count after initialization is rejected.
+
+The host MUST defer guest flip acknowledgment until the fence for that actual
+presentation completes. The renderer cannot infer the application's callback
+policy. Bleach's opt-in adapter claims an executed flip before presentation,
+associates its epoch with the submitted fence, and retires ordered tickets
+while draining or waiting for further commands. Closing drains outstanding
+tickets. No new synthetic vblank or gameplay tick is generated.
+
+cellGcmClaimFlipCompletion returns a validity bit plus the current request
+epoch and consumes the legacy execution credit. cellGcmCompleteFlip queues the
+epoch only AFTER the host fence. ppu_gcm_pump delivers each queued completion
+under its existing nonreentrant delivery guard; an older epoch cannot clear a
+newer WAITING status. Repeated callbacks are not coalesced. One pump delivers
+at most 256 tickets before yielding to other event kinds.
+
+Scope restriction: the adapter currently targets Bleach's inline flip boundary,
+where FIFO processing calls SetFlipCommand and stops before the next frame.
+It is NOT yet a universal asynchronous libgcm adapter. Imported flips queued
+before FIFO execution, multiple independent command contexts, catch-up that
+skips intermediate flip boundaries, or mixed legacy/native tick ownership need
+an epoch bound to the original marker and explicit event-order validation.
+Do not opt other titles into two slots without proving these contracts.
+Bleach validation uses BLEACH_PRESENT_ACK=1 and BLEACH_INDEPENDENT_CLOCK=1.
+
+Tests (no title assets):
+- tools/test_gcm_completion_tickets.py (CC selects compiler): includes legacy
+  flip-stream checks, deferred acknowledgment, old/new epoch ordering, epoch
+  wrap, repeated queue entries, bounded batches, nested delivery and Windows
+  concurrent pumps.
+- libs/video/tests/test_frame_submissions.c: two real D3D12 slots, 32 presents,
+  changing vertices, textures and surface aliases, then eight independent
+  pixel-oracle readbacks. Use BLEACH_RENDER_SCALE=3 for scaled surfaces and
+  RSX_SURFACE_VIEW_MB=1 to exercise view eviction. Build using the shared
+  live_draw_test_harness instructions. RSX_D3D_DEBUG is optional; report when
+  Windows Graphics Tools validation is unavailable rather than claiming it ran.
+
+Performance evaluation must use the same binary in one-slot and two-slot mode,
+the same scene/input interval and no capture or intrusive profiling. Frame
+timestamps demonstrate presentation throughput, not interpolated gameplay.
+CPU geometry parallelism and simulation/render snapshots remain separate
+structural work. Two slots alone do not establish a 120-FPS result.

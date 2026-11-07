@@ -1,0 +1,47 @@
+Closed native phase compiler (experimental, not a measured optimization)
+
+tools/spu_native_phases.py accepts an explicit entry/continuation pair and a
+set of approved leaf functions. It joins the entry's unconditional transfer
+with its complete continuation, substitutes the complete leaf bodies, gives
+their labels unique names, and promotes the register state into native locals.
+It rejects unknown helpers/context calls, dynamic register indices, non-local
+jumps, unresolved dispatch and unapproved context fields. Value helpers use an
+explicit allowlist supplied by the title. Calls marked opaque remain complete
+state barriers with the original call/drain and register spill/reload.
+
+This tool is not a purity proof for arbitrary code. The adapter must establish
+that private memory has no aliases to the register state or shared memory, that
+the selected entry contract holds, and that diagnostics observing intermediate
+state use the old path. Existing SPU arithmetic semantics and memory masking
+are retained. Unknown titles require their own entry and helper selection.
+
+Bleach implementation
+Entry98E0 transfers to9908. Six pure helpers at1148/1160/1188/1190/11A0/1AE8
+are inlined at ten sites. A cold AA40 mailbox helper remains a state barrier.
+The adapter gate reproduces the initial guards controlling that helper. It
+also requires an aligned valid stack and a header disjoint from stack saves.
+Rejected inputs retain the original entry BEFORE any phase work starts.
+Verification may run the native path and reference only after this gate has
+proved that the mailbox path cannot execute. Never duplicate real I/O merely
+to obtain differential verification.
+
+BLEACH_NATIVE_PHASES=1 enables the experimental closure; default is OFF.
+BLEACH_NATIVE_PHASE_VERIFY=N checks every Nth eligible call per host worker.
+The reference drains all continuations before comparison. Every GPR and all
+private local-store bytes, PC, status and outgoing trampoline are compared.
+The host aggregates successful checks.185 checked18544 calls without mismatch.
+The test source tools/tests/test_spu_native_phases.py exercises rejection and
+inlining boundaries. There is no claim of full-game or universal-title proof.
+
+Performance decision
+Same-binary clean tests186/187 observed76.11FPS with the old path and70.61FPS
+with consolidation enabled. The feature stays OFF. Do not describe its larger
+native function as automatically faster; register pressure/code footprint are
+possible explanations, not measured causes. Do not promote it as an FPS gain.
+
+The next structural boundary is elimination of repeated computation through
+complete dependency validation and owned output buffers. Caller preparation,
+callee-save state, stack ownership and ordered publication remain fresh for
+each invocation. The whole register/local-store image is not a reusable result.
+The closure and exact comparator are retained as experimental tooling for
+extracting that boundary, not as an implementation of persistent geometry.

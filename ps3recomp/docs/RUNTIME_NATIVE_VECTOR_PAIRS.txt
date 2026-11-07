@@ -1,0 +1,40 @@
+Independent arithmetic packing for native SPU code
+
+tools/spu_native_pairs.py operates on a lifter's local-register form. It pairs
+two independent 128-bit arithmetic operations into one AVX2 256-bit operation.
+runtime/spu/spu_native_pairs_x86.h implements the six paired operations. No
+instruction reassociation, separate multiply/add fusion, asset assumptions or
+title addresses are part of this shared pass.
+
+The first operation is delayed to the second. Every intervening statement must
+be an explicitly pure register assignment or private local-store load. Reading
+the first destination, changing its inputs/destination, stores, branches,
+labels, returns and unknown calls stop the search. Both sets of input arguments
+are evaluated before either output is assigned, permitting the second output
+to overwrite an input of the first. The *_native naming contract leaves the
+reference implementation untouched for differential execution.
+
+Purity is a caller obligation: the supplied pure_calls allowlist must contain
+only helpers without observable side effects. Local-store loads must refer to
+the current work unit's private snapshot, with no concurrent writer. The text
+pass supports only the documented local-register syntax, not arbitrary C.
+
+The x86 backend has the same caller-owned MXCSR and ISA contract as
+RUNTIME_NATIVE_FLOAT_X86.txt: AVX2/FMA supported by CPU and OS, round toward
+zero, DAZ, FTZ and masked exceptions, restored on leaving the work unit.
+Extended exponents and ambiguous overflow retain the exact integer reference.
+Selection belongs at whole-image entry, outside arithmetic and inner loops.
+Keep the baseline path available and treat packing as experimental until
+whole-game measurements and validation justify enabling it for that title.
+
+Validation on the i5-14600KF using Clang:
+- test_spu_native_pairs_x86.c: 121,053,696 exact operation-lane comparisons.
+- tools/tests/test_spu_native_pairs.py: dependency/barrier rejection cases and
+  32,768 full register/local-store comparisons with an identical I/O transcript.
+- Bleach run158: no differential arithmetic mismatch in the observed routines.
+  The full actor-memory audit found changes also partly observed in control159;
+  it is not a certificate of complete simulation/render separation.
+
+The pass and synthetic fixtures are reusable without game data. Reduced code
+size or doubled lane width does not imply a doubled frame rate. Measure the
+same executable, route and time window without verification/profiling enabled.

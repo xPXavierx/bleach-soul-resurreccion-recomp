@@ -1,0 +1,72 @@
+Native graphics preparation contract (experimental)
+==================================================
+
+RSX_NATIVE_PROGRAMS=1 enables API-independent program analysis records.
+RSX_NATIVE_BINDINGS=1 enables command-list-owned D3D12 state emission.
+Both default OFF. RSX_NATIVE_PROGRAM_VERIFY=1 compares every used record with
+legacy analysis/constants/hashes and aborts on mismatch; do not benchmark this.
+
+Program ownership and invalidation
+---------------------------------
+One renderer consumer owns the caches. Guest addresses are direct-mapped
+lookup hints, never program identity. Every hit compares actual instruction
+bytes, including END/source-kind/layout changes. VP records contain input/TXL
+dependencies and exact content hashes. FP records contain constant offsets,
+sampled units and structural hashes. Inline constant payloads are read freshly
+for every draw, using the existing sanitization rules. Only [0,count) of a
+constant block is valid; downstream consumers must not read the unused tail.
+
+The legacy FP texture-unit traversal treats branch instructions differently
+from constant collection/size/hash traversal. Records containing branches
+therefore validate ALL bytes, including inline payloads. This deliberately
+preserves existing semantics rather than changing the decoder in a cache patch.
+
+Each kind has 128 bounded content records and 1024 address hints. Eviction uses
+generations to invalidate stale hints; generation wrap clears hints. Storage
+owns copied code and offsets; guest pointers are never retained. Allocation
+failure/invalid/truncated code fails the native lookup. FP parsing asks the
+resolver for each required extent before reading it (at most 64 KiB). Program
+records are not a synchronization protocol for concurrent guest writers: the
+existing FIFO/guest lifetime contract still applies. Returned record pointers
+are valid only until the next lookup of the same kind. The live draw consumes
+VP layout and PSO metadata within that lifetime, on the same thread.
+
+FP records memoize eight seeded hash combinations to preserve the exact legacy
+pipeline identity. Texture sizes, shadow comparison, shader exports, layout,
+render state and topology remain part of the pipeline key. A PSO hit alone
+previously did not avoid the repeated program analyses before that lookup.
+
+Command-list ownership
+----------------------
+Each submission slot owns its bound-state record. Reset invalidates it; newly
+created lists start invalid. Common draws, downsampling and depth snapshot
+passes all use the same emitter for pipeline state, descriptor heaps, graphics
+root signature, render targets, viewport, scissor and topology. Stencil/blend
+state use the emitter too. Rewriting RTV/DSV CPU descriptors invalidates target
+bindings even if their handle address stays the same. State-changing operations
+added in future must use the emitter or invalidate affected bits.
+
+Dynamic CBVs, descriptor tables and vertex/index buffer views are still set
+per draw. Consequently a root-signature or heap change is followed by fresh
+root arguments in the normal draw path; no stale root arguments are cached.
+Draw order, barriers, blending, clears and submission completion are unchanged.
+This does not yet create persistent geometry, material packets or parallel
+command recording. VS constants still copy 512 vectors per draw.
+
+Validation and performance
+--------------------------
+test_native_programs exercises dynamic payloads, shared code across addresses,
+same-address code/length/dependency changes, branch conservative validation,
+eviction, bounds, missing END, VP inputs/TXL and cache lifetime.
+test_native_program_draws checks real pixels after changing FP code/constants
+at the same address, scissor transitions, surface changes and two frame slots.
+Existing test_frame_submissions checks 32 asynchronous presentations and eight
+retained surface images. test_native_shadow checks 22 depth/PCF/border cases.
+Live validation must cover title-specific rendering and resource transitions.
+Still images do not validate continuous shadow artifacts or gameplay timing.
+
+Compare modes using the same executable and input route. State-call reduction
+is not CPU-time reduction; metadata cache hit rate is not FPS improvement.
+Measure net frame time separately from overlapping CPU/GPU service times and
+reassess priorities against the 8.333 ms budget for 120 presentations/second.
+Simulation interpolation remains a separate correctness requirement.

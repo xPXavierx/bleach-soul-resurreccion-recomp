@@ -1,0 +1,72 @@
+Native geometry pose — complete supported data-level stage
+
+native_geometry_pose.h accepts bounded palette, influence, position, direction
+and scratch spans. It converts row-major3x4 matrices to cyclic diagonals,
+executes four-influence weighted skinning, transforms up to three direction
+streams and normalizes them. It retains original byte order, arithmetic order,
+weight scaling, zero semantics and reciprocal-estimate interpolation. The
+native arithmetic is shared with the existing verified typed skinning kernel.
+
+The API has no SPU context, registers, memory offsets, dispatcher, callbacks,
+allocation or snapshot cache. The owner holds all spans until normal return.
+Palette, positions and directions are mutated in place; scratch is reused by
+explicit chunks and its last contents remain published. Complete preflight
+checks all main spans, output aliases, palette indices and explicit tail sources
+before any mutation. AVX2/FMA and RTZ/DAZ/FTZ are caller-owned preconditions.
+
+Compatibility tail
+Legacy SIMD processes padded groups beyond the logical vertex count. Those
+padding bytes can contain matrix indices outside the actual palette. Merely
+checking the largest index against the declared matrix count loses many jobs;
+silently reading beyond a native allocation would be incorrect.
+
+The title adapter instead identifies at most the final four vertices and gives
+the kernel explicit bounded48-byte matrix sources. For each pair it snapshots
+both sets of matrices before publishing that pair. Those sources may read
+outputs produced by previous pairs/chunks; this ordering is part of the
+contract. They are not immutable snapshots of a previous frame. Ordinary
+logical vertices must still index the real palette. The main loop uses the
+existing bounded or checked arithmetic; the small compatibility tail uses
+checked arithmetic, preserving arbitrary padding values and extended floats.
+
+Some padding reads target the original callee's private stack. Its temporary
+register saves have no data-level meaning. The adapter rejects such calls
+before writes and retains the whole original stage, instead of fabricating
+register state inside the native kernel. Pure native future consumers should
+use logical vertex counts and eliminate this compatibility padding contract.
+
+Bleach integration
+BLEACH_NATIVE_POSE=1 enables the experimental replacement of the actual
+top-level0x480 call to0x98E0; default0. The currently supported format is
+enabled/full mode2, four influences, row-major3x4 palette, ordinary direction
+transform plus normalization. Other formats remain on the original path.
+BLEACH_NATIVE_POSE_VERIFY=N runs a differential reference everyN accepted
+calls per worker, checking result memory, return link/PC, callee-saved state,
+status/image/depth and FP controls. Diagnostic verification is excluded from
+performance comparisons. The next caller reloads r3/r4 before65D0; volatile
+scratch and the callee's dead stack are not the result ABI. Checked job spans
+cannot overlap that dead stack, including explicit padding matrix sources.
+
+Offline evidence226
+32 whole-stage before/after oracles from capture217.28 accepted,8,888 padded
+vertices; outputs, descriptors and all non-stack bytes match exactly. Four
+calls fall back because padding matrix reads overlap the private SPU stack.
+SDK test_native_geometry_pose.c: guard-page spans, independent translated
+position golden, normalized direction length/w, ten rejection cases with
+unchanged data. Runtime audit/performance results are separate evidence;
+do not infer a frame-rate gain from these offline checks.
+
+Remaining architecture
+The adapter still publishes into private LS-backed buffers for existing
+downstream stages. This is complete supported pose computation, not complete
+native geometry submission. View-dependent triangle processing and ordered
+publication remain. This mathematical pose stage is also not temporal
+interpolation; animation/camera interpolation must be implemented separately.
+
+Live audit226
+Build5b0dfb239c6c27bcada967d3ef1099bd08166731ab07668a7865be9d0203479b.
+1972 full differential checks passed,2014555 native calls,
+45381 fallbacks;97.80% accepted. All10601 GPU submissions retired.
+No changes in monitored actor fields during render-only passes. Six stills
+reviewed; no continuous-motion acceptance. Performance comparison227–229
+invalidated by concurrent user game; no FPS gain measured for this stage.

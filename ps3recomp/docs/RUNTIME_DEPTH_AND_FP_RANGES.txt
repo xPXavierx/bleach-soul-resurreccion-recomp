@@ -1,0 +1,46 @@
+Shared runtime contracts: depth content, clipping, fragment source ranges
+
+Fragment operands
+Decode source precision/range fields in instruction word2 for all three
+operands, excluding branch instructions. Mode4 applies clamp[0,1] before
+absolute value. Modes2/3 apply clamp[-2,2]/[-1,1] after absolute value.
+Apply negation last. Decode source2 ABS from bit18. Mode5 is a no-op.
+Mode1 half-precision rounding is not implemented by this change.
+
+Motivating failure: the title's original program compares a clamped operand
+against the same unclamped operand with SNE. Omitting the range modifier
+turns a bounds check into equality of identical finite values. That can
+select an invalid shadow cascade. The implementation contains no title
+addresses or shader-hash special cases.
+
+GPU regression test: libs/video/tests/test_fp_source_precision.c.
+Eighteen synthetic programs exercise every operand and modifier ordering.
+Before:3 passed/15 failed. After:18 passed/0 failed at scales1 and3.
+Existing decompiler suite:74 passed. Shadow comparison suite:22 passed.
+The tests fabricate programs and constants; no commercial game assets.
+
+Depth content
+An explicit GPU clear is a write even before a draw. It invalidates cached
+depth snapshots. A packed clear value of zero must remain zero.
+GPU regression: test_depth_content.c; before0/4, after4/0 at scales1 and3.
+
+Depth clipping
+Seed ZMIN_MAX_CONTROL at reset to1. Translate its clip and clamp fields into
+D3D12 DepthClipEnable and include the result in PSO identity. Clipping and
+depth testing are separate: disabling depth testing does not disable clipping.
+Ignore-W mode and nonstandard depth-range behavior remain unimplemented.
+GPU regression: test_depth_clip.c; before3/4, after7/0 at scales1 and3.
+
+Evidence boundary
+These tests establish individual shared-runtime contracts. They do not
+establish complete RSX accuracy or compatibility with another entire title.
+Depth content and clipping fixes alone did not remove the observed bands.
+The later source-range correction removed them in the reported review
+intervals of one continuous20-second forward-motion capture. Other scenes
+and longer sessions still require validation. No CPU speedup is claimed.
+
+Reference semantics (consulted read-only; implementation written locally)
+https://raw.githubusercontent.com/RPCS3/rpcs3/master/rpcs3/Emu/RSX/Program/RSXFragmentProgram.h
+https://raw.githubusercontent.com/RPCS3/rpcs3/master/rpcs3/Emu/RSX/Program/FragmentProgramDecompiler.cpp
+https://github.com/RPCS3/rpcs3/blob/master/rpcs3/Emu/RSX/rsx_decode.h
+https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_rasterizer_desc

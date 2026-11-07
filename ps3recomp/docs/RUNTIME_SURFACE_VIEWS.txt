@@ -1,0 +1,68 @@
+Reusable GPU surface views (D3D12)
+
+Scope
+-----
+libs/video/rsx_surface_views.inl implements rectangular texture aliases of
+rendered surfaces. It contains no title identifiers, shader hashes, addresses
+or gameplay policy. test_surface_views.c synthesizes geometry and programs;
+it requires neither a disc dump nor title firmware.
+
+Contract
+--------
+Identity: source resource identity and logical rectangle dimensions.
+Content: the source's write generation, independent of identity.
+Storage: GPU images with exact allocation-size accounting, bounded resident
+cache and LRU eviction. Default 128 MiB; RSX_SURFACE_VIEW_MB accepts 1..512.
+Lifetime: CPU descriptors selected for the current draw are pinned until its
+shader-visible descriptor table is copied. Older draws own their descriptor
+copies. Retired resources remain alive until the existing submission fence.
+No new waits and no synthesized GPU completion acknowledgements are used.
+
+The budget covers resident cache entries, not resources retired behind an
+outstanding fence. An oversized image or the current draw's pinned working
+set can exceed it. The cache has 1024 entries and a 4096-slot hash table.
+On a hit, unchanged source contents require neither allocation nor copying.
+Writes invalidate contents by generation; they do not destroy view identity.
+Surface replacement invalidates all its aliases before pointer reuse.
+
+Diagnostics
+-----------
+RSX_SURFACE_VIEWS=legacy selects the old two-rectangles-per-surface control.
+rsx_live_draw_surface_view_stats() reads cumulative statistics on the renderer
+thread. Profiling builds also print [surface-views] with residency, copies,
+hits, misses, allocations and evictions.
+
+Validation
+----------
+Build libs/video/tests/test_surface_views.c using the command documented in
+live_draw_test_harness.h, linked to the actual ps3recomp_runtime library.
+Run separate processes at native scale 1 and 3, with 16 MiB and 1 MiB budgets,
+and with the legacy control. The current scale compatibility environment is
+BLEACH_RENDER_SCALE; a title-neutral configuration API remains follow-up work.
+The test queues 64 differently sized aliases before any readback fence and
+compares every output pixel against an independently read source crop. It
+then verifies unchanged reuse and updated source contents. A 1 MiB run forces
+evictions while previous draws still reference retired images. It checks real
+D3D12 rendering, not a duplicate implementation of the cache algorithm.
+
+Integration boundary
+--------------------
+Generic resource ownership, SPURS jobs, ISA arithmetic, shader translation,
+resolution mapping and callback ordering belong in the SDK. Title addresses,
+engine timing changes, program-specific post-processing and animation
+interpolation belong in a title adapter with explicit invariants and tests.
+Passing these tests validates this component; it does not establish that
+another PS3 title boots or that all of its graphics semantics are supported.
+
+Next image-model work
+---------------------
+D3D12 resources and pipelines currently use SampleDesc.Count=1, Quality=0.
+RSX antialias modes are represented by expanded sample grids in ordinary
+textures (2x1 or 2x2). That is raster supersampling, not D3D12 hardware MSAA.
+Disabling extra samples needs a per-image logical-to-physical domain, with
+consistent colour/depth allocation, viewport/scissor mapping, alias crops,
+copies/resolves, WPOS shader variants and readback. Merely zeroing AA register
+bits or changing a resolve constant leaves incompatible resource contracts.
+Preserve guest addresses/pitches and title-independent ownership while adding
+that policy. Verify single-sample raster coverage, depth, aliases and copies
+at several scales before enabling it for a title.
