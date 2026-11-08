@@ -134,7 +134,7 @@ class JanelaLauncher : Form
         trocar.Click += delegate { EscolherJogo(); };
         Controls.Add(trocar);
 
-        // Monitor shape (ultrawide): wider 3D view, HUD and menus kept 16:9 in the centre.
+        // Monitor shape (ultrawide, experimental): wider 3D view, HUD and menus filling the screen.
         rProporcao = Rotulo("", 500, y0 + 81);
         proporcao = new Grupo(this, 500, y0 + 101, 40, "", "auto", "16:9", "16:9", "21:9", "21:9", "32:9", "32:9");
         proporcao.Valor = Execucao.Proporcao(cfg["proporcao"]);
@@ -188,12 +188,15 @@ class JanelaLauncher : Form
     {
         var g = e.Graphics;
         g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-        g.DrawImage(fundo, new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
-        // Darkening band behind the controls (layout coordinates are at 96 DPI, times K).
-        int topo = (int)(400 * K), x0 = (int)(36 * K), linha = (int)(458 * K);
-        var faixa = new Rectangle(0, topo, ClientSize.Width, ClientSize.Height - topo);
-        using (var b = new LinearGradientBrush(new Rectangle(faixa.X, faixa.Y - 1, faixa.Width, faixa.Height + 2), Color.FromArgb(0, 0, 0, 0), Color.FromArgb(235, 6, 6, 10), 90f))
+        // Raised so the logo at the bottom of the dump's PIC1.PNG clears the band.
+        g.DrawImage(fundo, new Rectangle(0, -(int)(44 * K), ClientSize.Width, ClientSize.Height));
+        // Dark band behind the controls: the picture is light there and has its copyright text (layout
+        // coordinates are at 96 DPI, times K).
+        int topo = (int)(436 * K), x0 = (int)(36 * K), linha = (int)(458 * K);
+        var faixa = new Rectangle(0, topo, ClientSize.Width, linha - topo);
+        using (var b = new LinearGradientBrush(new Rectangle(faixa.X, faixa.Y - 1, faixa.Width, faixa.Height + 2), Color.FromArgb(0, 6, 6, 10), Color.FromArgb(255, 6, 6, 10), 90f))
             g.FillRectangle(b, faixa);
+        using (var b = new SolidBrush(Color.FromArgb(6, 6, 10))) g.FillRectangle(b, 0, linha, ClientSize.Width, ClientSize.Height - linha);
         using (var pen = new Pen(Color.FromArgb(160, Tema.Vermelho), 2f * K)) g.DrawLine(pen, x0, linha, ClientSize.Width - x0, linha);
         using (var pen = new Pen(Color.FromArgb(70, Tema.Azul), K)) g.DrawLine(pen, x0, linha + 3 * K, ClientSize.Width - x0, linha + 3 * K);
         using (var pen = new Pen(Color.FromArgb(90, 90, 98), 1f)) g.DrawRectangle(pen, 0, 0, ClientSize.Width - 1, ClientSize.Height - 1);

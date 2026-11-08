@@ -8245,7 +8245,9 @@ static void ld_stage_report(void) {}
  * to the right edge, any other stays around the centre. Its perspective
  * vertices (w != 1) get x' = x * persp_ax + persp_bx, y' = y * persp_ay
  * instead when persp_ax is not 0 (flat_3d, figures). */
-typedef struct { float ax, bx, ay; int per_vertex; float zones[4]; float persp_ax, persp_ay, persp_bx; } ld_aspect_map;
+typedef struct { float ax, bx, ay; int per_vertex; float zones[4]; float persp_ax, persp_ay, persp_bx;
+                 float clip_top, clip_bottom;   /* canvas rows a band is cut to (0, 0: none) */
+                 int open_sides; } ld_aspect_map;   /* a full-width scissor stays full width */
 enum { LD_ASPECT_STRETCH, LD_ASPECT_CENTRE, LD_ASPECT_LEFT, LD_ASPECT_RIGHT, LD_ASPECT_COVER,
        LD_ASPECT_PILLAR, LD_ASPECT_TEXT, LD_ASPECT_KINDS };
 static u32 g_ld_aspect_counts[LD_ASPECT_KINDS];
@@ -8271,6 +8273,9 @@ static int g_ld_aspect_run = -1;
  * (g_ld_aspect_newbg: a new screen not in the table). */
 static u32 g_ld_aspect_grid[18];
 static int g_ld_aspect_menu, g_ld_aspect_video;
+/* This frame's draws of native geometry, and of 3D other than the menus' hexagon
+ * floor (its particles): the level is on, a frame that is never a menu. */
+static u32 g_ld_aspect_native, g_ld_aspect_3d;
 /* LD_ASPECT_OFF_GATE=<file>: while it exists, nothing is placed (the canvas
  * keeps the game's own 16:9 layout) but pieces are still traced -- the
  * original next to the ultrawide frame (claude-tools/ultrawide/jogar_telas.py). */
@@ -8289,6 +8294,9 @@ static u32 g_ld_aspect_npieces;
 static int ld_aspect_grid_half(void)
 {
     u32 cells = 0;
+    /* The level and its characters are on: never a menu, whatever the combo's
+     * tall flashes add up to. */
+    if (g_ld_aspect_native || g_ld_aspect_3d >= 30) return 0;
     for (int r = 0; r < 18; r++) cells += (u32)__builtin_popcount(g_ld_aspect_grid[r]);
     return cells * 2u >= 32u * 18u;
 }
@@ -8306,13 +8314,18 @@ static int ld_aspect_bars(void)
  * (anchored): a figure going on past its screen (the cut-in sliding into the
  * level) eases from there back to the centre. */
 static u64 g_ld_fig_tex[2][32];
-static int g_ld_fig_place = -1, g_ld_fig_anchored;
+static int g_ld_fig_place = -1, g_ld_fig_anchored;   /* place: 1 carried on past its screen, 0 not */
 /* The transform of the last draw, if it was a figure's: the untextured pass
  * the game draws right after each part (its dark outline, by a program the
  * CPU cannot follow) gets the same. */
 static int g_ld_fig_last;
 static float g_ld_fig_ax = 1.0f, g_ld_fig_ay = 1.0f, g_ld_fig_bx;
 static float g_ld_fig_lo = 1e30f, g_ld_fig_hi = -1e30f, g_ld_fig_cx = 640.0f, g_ld_fig_cx0 = 640.0f;
+/* 1 = the screen's whole zoom, 0 = none; updated once per frame from how far the
+ * figure has slid. It only goes down, at a limited rate: the extent follows the
+ * model's limbs and sword back and forth, and the zoom must not. */
+static float g_ld_fig_ease = 1.0f;
+static ULONGLONG g_ld_fig_tick;
 static int ld_fig_vp(int screen)
 {
     if (screen < 0 || rsx_aspect_screens[screen].figure_vp[0] == 0) return 0;
@@ -8399,14 +8412,40 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
     const float k = g_ld_aspect_k, inv = 1.0f / k;
     memset(m, 0, sizeof(*m));
     m->ax = 1; m->ay = 1;
-    if (k == 1.0f || g_ld_movie_mode || native_geometry) return LD_ASPECT_STRETCH;
+    if (k == 1.0f || g_ld_movie_mode) return LD_ASPECT_STRETCH;
     if (Wv != (float)g.width || Hv != (float)g.height) return LD_ASPECT_STRETCH;
     const int after_fig = g_ld_fig_last;
     g_ld_fig_last = 0;
     const int screen = g_ld_aspect_screen >= 0 ? g_ld_aspect_screen : g_ld_aspect_screen_prev;
+    if (native_geometry) {
+        /* Skinned bodies: no vertices to measure, the screen says. */
+        g_ld_aspect_native++;
+        if (screen >= 0 && rsx_aspect_screens[screen].flat_3d) { m->ax = inv; return LD_ASPECT_CENTRE; }
+        if (screen >= 0 && rsx_aspect_screens[screen].figure == RSX_LAYOUT_COVER &&
+            !rsx_aspect_screens[screen].figure_carry) {
+            m->ax = k; m->ay = k;
+            return LD_ASPECT_COVER;
+        }
+        return LD_ASPECT_STRETCH;
+    }
+    /* A screen with its own 3D: a draw reading the shadow map counts as a
+     * screen pass, but in perspective it is a character's body. */
+    const int fig_screen = screen >= 0 && !rsx_aspect_screens[screen].figure_carry &&
+                           (rsx_aspect_screens[screen].flat_3d || rsx_aspect_screens[screen].figure_vp[0]);
     const int n = g_ld_current_pso.resources.position_block;
     if (n == -1) {
-        if (screen_pass) { g_ld_aspect_container = LD_ASPECT_CENTRE; return LD_ASPECT_STRETCH; }
+        if (screen_pass && !fig_screen) { g_ld_aspect_container = LD_ASPECT_CENTRE; return LD_ASPECT_STRETCH; }
+        if (screen_pass) {
+            /* Unknown program: the vertex shader tells them apart, 2D (the
+             * composition passes, w = 1) stays and perspective is placed. */
+            const float all = 1e9f;
+            g_ld_aspect_container = LD_ASPECT_CENTRE;
+            m->per_vertex = 1;
+            m->persp_ax = rsx_aspect_screens[screen].flat_3d ? inv : k;
+            m->persp_ay = rsx_aspect_screens[screen].flat_3d ? 1.0f : k;
+            m->zones[0] = -all; m->zones[1] = all; m->zones[2] = -all; m->zones[3] = all;
+            return LD_ASPECT_TEXT;
+        }
         /* Whole draw one way (per-vertex zones would tear it): with the
          * panel before it on gameplay frames, else around the centre. */
         m->ax = inv; m->per_vertex = 1;
@@ -8421,7 +8460,6 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
             const int f = rsx_aspect_screens[screen].figure;
             m->persp_ax = f == RSX_LAYOUT_COVER ? k : 1.0f;
             m->persp_ay = f == RSX_LAYOUT_COVER ? k : 1.0f;
-            m->persp_bx = f == RSX_LAYOUT_RIGHT ? 1.0f - inv : 0.0f;
         }
         const float all = 1e9f;
         const int follow = screen < 0 && !g_ld_aspect_menu ? g_ld_aspect_container : LD_ASPECT_CENTRE;
@@ -8454,12 +8492,13 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
         memcpy(y, rsx_dsp_constant(&g.rsx, (u32)n + 1u), sizeof(y));
         memcpy(w, rsx_dsp_constant(&g.rsx, (u32)n + 3u), sizeof(w));
     }
-    if (screen_pass) {
+    /* Perspective (3D) draws are measured too, for the layout trace. */
+    const int persp = !text && (w[0] != 0.0f || w[1] != 0.0f || w[2] != 0.0f || w[3] != 1.0f);
+    if (persp && (u32)g_ld_current_pso.vp_hash != 0xFCEE8AD3u) g_ld_aspect_3d++;
+    if (screen_pass && !(persp && fig_screen)) {
         g_ld_aspect_container = LD_ASPECT_CENTRE;
         return LD_ASPECT_STRETCH;
     }
-    /* Perspective (3D) draws are measured too, for the layout trace. */
-    const int persp = !text && (w[0] != 0.0f || w[1] != 0.0f || w[2] != 0.0f || w[3] != 1.0f);
     const int mapped = vp->scale[0] != 0.0f || vp->translate[0] != 0.0f;
     float lo = 1e30f, hi = -1e30f, top = 1e30f, bottom = -1e30f;
     for (u32 i = 0; i < dc.n_verts; i++) {
@@ -8487,41 +8526,40 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
          * background (y * k), so the two layers stay aligned. A screen whose
          * 3D is not widened squeezes it. */
         g_ld_aspect_container = LD_ASPECT_CENTRE;
+        /* The aura around the screen in Ignition: a plane on the camera exactly as
+         * big as the 16:9 frame, whatever the character. Its flames go around the
+         * edges of the display, so it extends along the width and keeps its height. */
+        if (image && (u32)g_ld_current_pso.vp_hash == RSX_VP_AURA && fabsf((hi - lo) * k - RSX_AURA_W) < 12.0f &&
+            fabsf(top - RSX_AURA_TOP) < 6.0f && fabsf(bottom - RSX_AURA_BOTTOM) < 6.0f) {
+            m->ax = k;
+            return LD_ASPECT_COVER;
+        }
         if (screen >= 0) {
             const int pinned = image ? rsx_aspect_screen_pin(screen, tex, lo, top, hi, bottom) : -1;
             if (pinned == RSX_LAYOUT_COVER) {
                 m->ax = k; m->ay = k;
                 return LD_ASPECT_COVER;
             }
-            if (pinned < 0 && ld_fig_vp(screen)) {
+            if (pinned < 0 && (ld_fig_vp(screen) || (screen_pass && rsx_aspect_screens[screen].figure_vp[0]))) {
                 /* A figure: placed like its 2D render, and remembered so the
                  * same model keeps the placement once the screen is gone. */
-                g_ld_fig_place = rsx_aspect_screens[screen].figure;
+                g_ld_fig_place = rsx_aspect_screens[screen].figure_carry;
                 g_ld_fig_anchored = 1;
                 g_ld_fig_last = 1;
                 ld_fig_note(image ? tex : 0, lo, hi);
-                if (g_ld_fig_place == RSX_LAYOUT_COVER) {
-                    m->ax = k; m->ay = k;
-                    g_ld_fig_ax = k; g_ld_fig_ay = k; g_ld_fig_bx = 0.0f;
-                    return LD_ASPECT_COVER;
-                }
-                m->bx = 1.0f - inv;
-                g_ld_fig_ax = 1.0f; g_ld_fig_ay = 1.0f; g_ld_fig_bx = m->bx;
-                return LD_ASPECT_RIGHT;
+                m->ax = k; m->ay = k;
+                g_ld_fig_ax = k; g_ld_fig_ay = k; g_ld_fig_bx = 0.0f;
+                return LD_ASPECT_COVER;
             }
             if (rsx_aspect_screens[screen].flat_3d) { m->ax = inv; return LD_ASPECT_CENTRE; }
-        } else if (image && g_ld_fig_place == RSX_LAYOUT_RIGHT && ld_fig_seen(tex)) {
-            /* The figure carried on into the level: its shift eases out as it
-             * slides from where its screen left it back to the centre (one
-             * shift for all its parts, from the last frame's extent). */
+        } else if (image && g_ld_fig_place == 1 && ld_fig_seen(tex)) {
+            /* The figure carried on into the level: its zoom eases out as it
+             * slides back to the centre (g_ld_fig_ease, one zoom for all its parts). */
             ld_fig_note(tex, lo, hi);
-            const float span = g_ld_fig_cx0 - 0.5f * Wv;
-            float f = span > 1.0f ? (g_ld_fig_cx - 0.5f * Wv) / span : 0.0f;
-            f = f < 0.0f ? 0.0f : f > 1.0f ? 1.0f : f;
-            m->bx = f * (1.0f - inv);
+            m->ax = 1.0f + g_ld_fig_ease * (k - 1.0f); m->ay = m->ax;
             g_ld_fig_last = 1;
-            g_ld_fig_ax = 1.0f; g_ld_fig_ay = 1.0f; g_ld_fig_bx = m->bx;
-            return LD_ASPECT_RIGHT;
+            g_ld_fig_ax = m->ax; g_ld_fig_ay = m->ay; g_ld_fig_bx = 0.0f;
+            return LD_ASPECT_COVER;
         }
         return LD_ASPECT_STRETCH;
     }
@@ -8540,7 +8578,8 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
                     p = rsx_aspect_screen_pin(s, RSX_TEX_TEXT, lo, top, hi, bottom);
                     if (p < 0) p = ld_aspect_hud_side(lo, top, hi, bottom, Wv, Hv);
                 } else {
-                    p = rsx_aspect_screen_text(s, (lo + hi) * 0.5f, (top + bottom) * 0.5f);
+                    p = rsx_aspect_screen_pin(s, RSX_TEX_TEXT, lo, top, hi, bottom);
+                    if (p < 0) p = rsx_aspect_screen_text(s, (lo + hi) * 0.5f, (top + bottom) * 0.5f);
                 }
                 g_ld_aspect_run = p == RSX_LAYOUT_LEFT ? LD_ASPECT_LEFT
                                 : p == RSX_LAYOUT_RIGHT ? LD_ASPECT_RIGHT : LD_ASPECT_CENTRE;
@@ -8590,9 +8629,15 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
     if (hud) {
         /* Gameplay, or a screen over it: pinned pieces first, then the HUD
          * rules below. */
-        const int pinned = image ? rsx_aspect_screen_pin(now >= 0 ? now : RSX_SCREEN_GAMEPLAY, tex,
-                                                         lo, top, hi, bottom) : -1;
-        if (pinned >= 0 && (!spanning || pinned == RSX_LAYOUT_COVER)) {
+        const int pinned = image && (u32)g_ld_current_pso.vp_hash != RSX_VP_MINIMAP
+            ? rsx_aspect_screen_pin(now >= 0 ? now : RSX_SCREEN_GAMEPLAY, tex, lo, top, hi, bottom) : -1;
+        /* The level's map behind the minimap, as big as the level and scrolling
+         * with the player: always around the minimap's centre, whatever its box. */
+        const int minimap_map = image && (u32)g_ld_current_pso.vp_hash == RSX_VP_MINIMAP && hi - lo >= 256.0f &&
+                                lo < RSX_MINIMAP_X && hi > RSX_MINIMAP_X && top < RSX_MINIMAP_Y && bottom > RSX_MINIMAP_Y;
+        if (minimap_map) {
+            kind = LD_ASPECT_RIGHT;
+        } else if (pinned >= 0 && (!spanning || pinned == RSX_LAYOUT_COVER)) {
             kind = pinned == RSX_LAYOUT_COVER ? LD_ASPECT_COVER : pinned == RSX_LAYOUT_LEFT ? LD_ASPECT_LEFT
                  : pinned == RSX_LAYOUT_RIGHT ? LD_ASPECT_RIGHT : LD_ASPECT_CENTRE;
         } else if (spanning) {
@@ -8614,6 +8659,10 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
         }
     } else if (now >= 0) {
         int p = rsx_aspect_screen_piece(now, image ? tex : 0, lo, top, hi, bottom, strip);
+        if (p == RSX_LAYOUT_STRETCH) {
+            g_ld_aspect_container = LD_ASPECT_CENTRE;
+            return LD_ASPECT_STRETCH;
+        }
         if (image && (rsx_aspect_screens[now].cover_h > 0 || rsx_aspect_screens[now].compose)) {
             /* A picture drawn as tiles (an episode illustration, a character's
              * art sliding in) goes whole: once one tile is tall enough to
@@ -8631,6 +8680,11 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
             m->ay = k;
             return LD_ASPECT_COVER;
         }
+        if (p == RSX_LAYOUT_BAND) {
+            g_ld_aspect_container = LD_ASPECT_CENTRE;
+            m->ay = k; m->clip_top = top; m->clip_bottom = bottom;
+            return LD_ASPECT_COVER;
+        }
         kind = p == RSX_LAYOUT_COVER ? LD_ASPECT_COVER : p == RSX_LAYOUT_LEFT ? LD_ASPECT_LEFT
              : p == RSX_LAYOUT_RIGHT ? LD_ASPECT_RIGHT : LD_ASPECT_CENTRE;
     } else {
@@ -8640,7 +8694,7 @@ static int ld_aspect_place(ld_aspect_map* m, const rsx_dsp_viewport* vp, float W
     case LD_ASPECT_COVER: m->ay = k; break;
     case LD_ASPECT_LEFT: m->ax = inv; m->bx = inv - 1.0f; break;
     case LD_ASPECT_RIGHT: m->ax = inv; m->bx = 1.0f - inv; break;
-    default: m->ax = inv; break;
+    default: m->ax = inv; m->open_sides = now >= 0 && rsx_aspect_screens[now].open_sides; break;
     }
     g_ld_aspect_container = kind == LD_ASPECT_COVER ? LD_ASPECT_CENTRE : kind;
     return kind;
@@ -9561,12 +9615,20 @@ static void sink_end_geometry_impl(void* user, const rsx_dispatch* r,const rsx_g
     if ((aspect_kind != LD_ASPECT_STRETCH && !aspect.per_vertex) ||
         (aspect.per_vertex && sc.right - sc.left < (LONG)W)) {
         const float c = W * 0.5f, bx = aspect.bx * c, cy = H * 0.5f;
-        sc.left = (LONG)floorf((sc.left - c) * aspect.ax + bx + c);
-        sc.right = (LONG)ceilf((sc.right - c) * aspect.ax + bx + c);
+        const int open = aspect.open_sides && sc.left <= 0 && sc.right >= (LONG)W;
+        sc.left = open ? 0 : (LONG)floorf((sc.left - c) * aspect.ax + bx + c);
+        sc.right = open ? (LONG)W : (LONG)ceilf((sc.right - c) * aspect.ax + bx + c);
         sc.top = (LONG)floorf((sc.top - cy) * aspect.ay + cy);
         sc.bottom = (LONG)ceilf((sc.bottom - cy) * aspect.ay + cy);
         if (sc.left < 0) sc.left = 0;
         if (sc.top < 0) sc.top = 0;
+        if (aspect.clip_bottom > aspect.clip_top) {   /* a band: its own rows */
+            const float rows = H / Hv;
+            const LONG t = (LONG)floorf(aspect.clip_top * rows), b = (LONG)ceilf(aspect.clip_bottom * rows);
+            if (t > sc.top) sc.top = t;
+            if (b < sc.bottom) sc.bottom = b;
+            if (sc.bottom < sc.top) sc.bottom = sc.top;
+        }
     }
     sc.left = ld_surface_edge(target_surface, sc.left); sc.top = ld_surface_edge(target_surface, sc.top);
     sc.right = ld_surface_edge(target_surface, sc.right);
@@ -11574,6 +11636,8 @@ void rsx_live_draw_present(u32 buffer_id)
       }
       memset(g_ld_aspect_counts, 0, sizeof(g_ld_aspect_counts));
       g_ld_aspect_menu = ld_aspect_grid_half();
+      const u32 g_ld_aspect_3d_log = g_ld_aspect_3d;
+      g_ld_aspect_native = 0; g_ld_aspect_3d = 0;
       memset(g_ld_aspect_grid, 0, sizeof(g_ld_aspect_grid));
       if (g_ld_aspect_screen >= 0) { g_ld_aspect_screen_prev = g_ld_aspect_screen; g_ld_aspect_sticky = 0; }
       else if (g_ld_aspect_newbg || ++g_ld_aspect_sticky > 30) g_ld_aspect_screen_prev = -1;
@@ -11584,15 +11648,27 @@ void rsx_live_draw_present(u32 buffer_id)
       memset(g_ld_fig_tex[0], 0, sizeof(g_ld_fig_tex[0]));
       if (g_ld_fig_hi >= g_ld_fig_lo) g_ld_fig_cx = (g_ld_fig_lo + g_ld_fig_hi) * 0.5f;
       if (g_ld_fig_anchored) g_ld_fig_cx0 = g_ld_fig_cx;
+      { const ULONGLONG now_ms = GetTickCount64();
+        const float dt = (float)(now_ms - g_ld_fig_tick);
+        g_ld_fig_tick = now_ms;
+        if (g_ld_fig_anchored) g_ld_fig_ease = 1.0f;
+        else {
+            const float span = g_ld_fig_cx0 - 640.0f;
+            float target = span > 1.0f ? (g_ld_fig_cx - 640.0f) / span : 0.0f;
+            target = target < 0.0f ? 0.0f : target;
+            const float floor_now = g_ld_fig_ease - dt / 700.0f;   /* at most the whole zoom in 0.7 s */
+            if (target < g_ld_fig_ease) g_ld_fig_ease = target > floor_now ? target : floor_now;
+        } }
       if (!g_ld_fig_tex[1][0] && !g_ld_fig_anchored) g_ld_fig_place = -1;
       g_ld_fig_anchored = 0; g_ld_fig_lo = 1e30f; g_ld_fig_hi = -1e30f;
       { static int framelog = -1;
         if (framelog < 0) framelog = getenv("LD_ASPECT_FRAMELOG") != NULL;
         if (framelog && g_ld_aspect_k != 1.0f) {
-            fprintf(stderr, "[aspect-frame] %u screen=%s first=%s early=%u menu=%d video=%d fig=%d", g_ld_frames,
+            fprintf(stderr, "[aspect-frame] %u screen=%s first=%s early=%u menu=%d video=%d fig=%d 3d=%u cx=%.0f ease=%.3f", g_ld_frames,
                     g_ld_aspect_screen >= 0 ? rsx_aspect_screens[g_ld_aspect_screen].name : "-",
                     g_ld_aspect_first >= 0 ? rsx_aspect_screens[g_ld_aspect_first].name : "-",
-                    g_ld_aspect_early, g_ld_aspect_menu, g_ld_aspect_video, g_ld_fig_place);
+                    g_ld_aspect_early, g_ld_aspect_menu, g_ld_aspect_video, g_ld_fig_place, g_ld_aspect_3d_log,
+                    g_ld_fig_cx, g_ld_fig_ease);
             for (int i = 0; i < 6 && g_ld_aspect_early_tex[i]; i++)   /* the unrecognised textures */
                 fprintf(stderr, " %016llx/%u", (unsigned long long)g_ld_aspect_early_tex[i], g_ld_aspect_early_h[i]);
             fputc('\n', stderr);

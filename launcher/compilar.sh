@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds "Bleach Launcher.exe" (launcher) with the .NET Framework 4 C# compiler.
-# "compilar.sh ultrawide" also shows the aspect ratio option (still in progress; the v1 release has none).
+# "compilar.sh ultrawide" also shows the aspect ratio option (as the setup does; the v1 release had none).
 cd "$(dirname "$0")"
 F=/c/Windows/Microsoft.NET/Framework64/v4.0.30319
 DEF=

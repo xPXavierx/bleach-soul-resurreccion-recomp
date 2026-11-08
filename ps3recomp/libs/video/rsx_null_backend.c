@@ -25,6 +25,7 @@
 
 typedef struct {
     HWND     hwnd;
+    HWND     view;      /* the picture, when it must not fill the window (null_view_fit) */
     HDC      hdc;
     u32      width;
     u32      height;
@@ -53,9 +54,50 @@ static NullBackendState s_state;
 
 static int s_present_suppressed = 0;
 
+/* The picture keeps the chosen shape whatever the window's: the swap chain binds to
+ * this child, centred on the black window. It takes no input: focus, cursor and
+ * closing stay with the window. A borderless window of the same shape needs no child
+ * and keeps its direct presentation. */
+static void null_view_fit(void)
+{
+    RECT rc;
+    if (!s_state.view || !GetClientRect(s_state.hwnd, &rc) || rc.right <= 0 || rc.bottom <= 0) return;
+    const double aspect = rsx_aspect_ratio();
+    LONG w = rc.right, h = rc.bottom;
+    if (w > h * aspect) w = (LONG)(h * aspect + 0.5); else h = (LONG)(w / aspect + 0.5);
+    SetWindowPos(s_state.view, NULL, (rc.right - w) / 2, (rc.bottom - h) / 2, w, h,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+/* Dragging a window edge follows the chosen shape: the edge pulled decides, a corner by its width. */
+static void null_sizing_keep_aspect(HWND hwnd, WPARAM edge, RECT* r)
+{
+    RECT win, client;
+    GetWindowRect(hwnd, &win);
+    GetClientRect(hwnd, &client);
+    const LONG frame_w = (win.right - win.left) - client.right;
+    const LONG frame_h = (win.bottom - win.top) - client.bottom;
+    const double aspect = rsx_aspect_ratio();
+    if (edge == WMSZ_TOP || edge == WMSZ_BOTTOM) {
+        r->right = r->left + (LONG)((r->bottom - r->top - frame_h) * aspect + 0.5) + frame_w;
+        return;
+    }
+    const LONG h = (LONG)((r->right - r->left - frame_w) / aspect + 0.5) + frame_h;
+    if (edge == WMSZ_TOPLEFT || edge == WMSZ_TOPRIGHT) r->top = r->bottom - h;
+    else r->bottom = r->top + h;
+}
+
 static LRESULT CALLBACK null_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg) {
+    case WM_SIZE:
+        null_view_fit();
+        break;
+
+    case WM_SIZING:
+        if (s_state.view) null_sizing_keep_aspect(hwnd, wp, (RECT*)lp);
+        return TRUE;
+
     case WM_CLOSE:
         s_state.window_closed = 1;
         DestroyWindow(hwnd);
@@ -68,6 +110,12 @@ static LRESULT CALLBACK null_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
+
+        if (s_state.view) {   /* what shows around the picture */
+            FillRect(hdc, &ps.rcPaint, (HBRUSH)GetStockObject(BLACK_BRUSH));
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
 
         /* Fill with current clear color */
         HBRUSH brush = CreateSolidBrush(s_state.clear_color);
@@ -249,8 +297,12 @@ int rsx_null_backend_init(u32 width, u32 height, const char* title)
     wc.lpfnWndProc = null_wndproc;
     wc.hInstance = GetModuleHandle(NULL);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
     wc.lpszClassName = "ps3recomp_null";
+    RegisterClassExA(&wc);
+    wc.style = 0;
+    wc.lpfnWndProc = DefWindowProcA;
+    wc.lpszClassName = "ps3recomp_null_view";
     RegisterClassExA(&wc);
 
     /* Compute window size from client area. Ultrawide (rsx_aspect.h): the
@@ -271,7 +323,7 @@ int rsx_null_backend_init(u32 width, u32 height, const char* title)
         : CreateWindowExA(
         0, "ps3recomp_null",
         title ? title : "ps3recomp",
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT,
         wr.right - wr.left, wr.bottom - wr.top,
         NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -279,6 +331,17 @@ int rsx_null_backend_init(u32 width, u32 height, const char* title)
     if (!s_state.hwnd) {
         printf("[RSX null] ERROR: CreateWindow failed (%lu)\n", GetLastError());
         return -1;
+    }
+
+    /* A window can take any shape; borderless needs this on a monitor of another shape.
+     * Exclusive fullscreen presents on the window itself. */
+    const double screen = (double)GetSystemMetrics(SM_CXSCREEN) / GetSystemMetrics(SM_CYSCREEN);
+    if (!covering || (strcmp(mode, "exclusiva") && fabs(screen - rsx_aspect_ratio()) > 0.005)) {
+        if (covering)
+            SetWindowLongPtrA(s_state.hwnd, GWL_STYLE, GetWindowLongPtrA(s_state.hwnd, GWL_STYLE) | WS_CLIPCHILDREN);
+        s_state.view = CreateWindowExA(0, "ps3recomp_null_view", "", WS_CHILD | WS_VISIBLE | WS_DISABLED,
+                                       0, 0, 1, 1, s_state.hwnd, NULL, GetModuleHandle(NULL), NULL);
+        null_view_fit();
     }
 
     s_state.hdc = GetDC(s_state.hwnd);
@@ -305,6 +368,7 @@ void rsx_null_backend_shutdown(void)
         ReleaseDC(s_state.hwnd, s_state.hdc);
         DestroyWindow(s_state.hwnd);
         s_state.hwnd = NULL;
+        s_state.view = NULL;
     }
     rsx_set_backend(NULL);
     printf("[RSX null] Backend shut down after %llu frames\n",
@@ -347,7 +411,7 @@ int rsx_null_backend_pump_messages(void)
  * needs the HWND and a way to silence the GDI present underneath it. */
 void* rsx_null_backend_get_hwnd(void)
 {
-    return (void*)s_state.hwnd;
+    return s_state.view ? (void*)s_state.view : (void*)s_state.hwnd;
 }
 
 void rsx_null_backend_suppress_present(int on)

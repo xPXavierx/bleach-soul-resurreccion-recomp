@@ -3,7 +3,7 @@
 It carries nothing derived from the game: no EBOOT, no recompiled code, no shaders, no firmware.
 The player's PC rebuilds the game from their own dump (Instalador.cs, Compilacao.cs, construir.py).
 Payload (zip appended to Instalador.exe):
-  Bleach Launcher.exe (v1: no ultrawide option), configuracao.json, traducao\ (translated strings +
+  Bleach Launcher.exe, configuracao.json, traducao\ (translated strings +
   hashes of the originals), licencas\, rpcs3\ (GPL: decrypts the EBOOT, reads the firmware file),
   bin\ffmpeg.exe (GPL: the game's videos), fonte\ (ps3recomp SDK and the bleach-recomp host sources,
   with edicoes-recompilado.json: the hand edits as hashes of the replaced lines + new lines).
@@ -67,7 +67,7 @@ def edicoes():
 
 
 def compilar_cs(saida_exe, fontes, extras):
-    subprocess.run([str(csc), '/nologo', '/target:winexe', '/codepage:65001', '/win32icon:icone-recomp.ico',
+    subprocess.run([str(csc), '/nologo', '/target:winexe', '/codepage:65001', '/win32icon:icone-recomp.ico', '/define:ULTRAWIDE',
                     '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll',
                     '/r:System.Web.Extensions.dll', '/lib:' + str(csc.parent / 'WPF'), '/r:UIAutomationClient.dll', '/r:UIAutomationTypes.dll'] + extras + ['/out:' + str(saida_exe)] + fontes,
                    check=True, cwd=aqui)
@@ -91,7 +91,6 @@ def montar():
     stage = work / 'bleach-install' / 'stage-setup'
     if stage.exists(): shutil.rmtree(stage)
     stage.mkdir(parents=True)
-    # v1: built without ULTRAWIDE (the game always runs 16:9).
     compilar_cs(stage / 'Bleach Launcher.exe', ['Launcher.cs', 'Nucleo.cs', 'Visual.cs', 'Idiomas.cs', 'Traducao.cs'], [])
     stub = work / 'bleach-install' / 'Instalador-setup.exe'
     compilar_cs(stub, ['Instalador.cs', 'Compilacao.cs', 'Nucleo.cs', 'Visual.cs', 'Idiomas.cs'],

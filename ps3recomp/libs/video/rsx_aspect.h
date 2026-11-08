@@ -3,8 +3,8 @@
 
 /* Display aspect ratio for ultrawide monitors: BLEACH_ASPECT=16:9|21:9|32:9|
  * <w>:<h>|<w>x<h>|<decimal>|auto (the primary monitor, which the borderless
- * window covers). "21:9" is 64:27 (2560x1080, 5120x2160); a 3440x1440 panel
- * can pass its own size.
+ * window covers). "21:9" is 64:27 (2560x1080, 5120x2160), or the primary
+ * monitor's own shape when it is one of that family (3440x1440, 3840x1600).
  *
  * The game keeps its 1280x720 canvas. Everyone agrees on one factor
  * k = aspect / (16/9): the game's projection widens the horizontal field of
@@ -25,7 +25,13 @@
 static inline double rsx_aspect_parse(const char* e)
 {
     if (!e || !*e) return 0;
-    if (!strcmp(e, "21:9")) return 64.0 / 27.0;
+    if (!strcmp(e, "21:9")) {
+#ifdef _WIN32
+        const int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
+        if (sw > 0 && sh > 0 && (double)sw / sh >= 2.3 && (double)sw / sh <= 2.45) return (double)sw / sh;
+#endif
+        return 64.0 / 27.0;
+    }
     if (!strcmp(e, "auto")) {
 #ifdef _WIN32
         const int w = GetSystemMetrics(SM_CXSCREEN), h = GetSystemMetrics(SM_CYSCREEN);

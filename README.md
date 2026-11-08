@@ -18,7 +18,9 @@ traduzido de PowerPC/SPU para C++ e compilado como um programa nativo do Windows
 
 - Resolução interna de 720p até 4K.
 - 30, 60 ou 120 FPS (a simulação roda na taxa escolhida; a velocidade do jogo continua a original).
-- Tela cheia sem borda ou janela.
+- Tela cheia sem borda ou janela. A imagem sempre mantém a proporção escolhida, com barras pretas quando a tela tem outro
+  formato.
+- Ultrawide **experimental** (21:9 e 32:9): visão 3D mais larga, com HUD e menus preenchendo a tela.
 - Texto do jogo em inglês (original), português do Brasil, francês ou espanhol.
 - Launcher em inglês, português, francês e espanhol, com atalhos prontos para Steam/Playnite.
 
@@ -57,8 +59,8 @@ RPCS3; ele roda como um programa nativo do Windows.
 
 ### Como jogar
 
-Abra o atalho **Bleach Soul Resurrección**. No launcher escolha resolução, FPS, modo de tela e o idioma do texto
-do jogo, e clique em **Jogar**. O launcher lembra o seu dump; se ele for um `.iso`, o Windows o monta sozinho
+Abra o atalho **Bleach Soul Resurrección**. No launcher escolha resolução, FPS, modo de tela, proporção e o idioma do
+texto do jogo, e clique em **Jogar**. O launcher lembra o seu dump; se ele for um `.iso`, o Windows o monta sozinho
 enquanto o jogo roda.
 
 - **Saves e configurações:** `%LOCALAPPDATA%\BleachSoulResurreccion` (o desinstalador pergunta se deve apagá-los).
@@ -66,12 +68,12 @@ enquanto o jogo roda.
   depois eles ficam guardados no disco.
 - **Esc não fecha o jogo.** Para sair, use o menu do jogo, o botão de fechar da janela ou Alt+F4.
 - **Atalhos sem launcher:** veja a pasta *Opções de execução* na pasta de instalação (`--jogar`, `--fps`,
-  `--tela`, `--resolucao`, `--texto`).
+  `--tela`, `--resolucao`, `--proporcao`, `--texto`).
 
 ### Problemas conhecidos
 
-- Esta versão roda sempre em 16:9. O suporte a ultrawide (21:9 / 32:9) está em desenvolvimento e virá numa
-  atualização.
+- O ultrawide (21:9 / 32:9) ainda é experimental: alguma tela pode ter elementos fora do lugar. Se encontrar uma, abra
+  uma *issue* com um print. Para a experiência original, use 16:9.
 - Se o jogo fechar com erro, os logs ficam em `%LOCALAPPDATA%\BleachSoulResurreccion\logs` (e o da instalação em
   `logs\instalacao.log`). Abra uma *issue* com eles.
 
@@ -117,7 +119,9 @@ not an emulator.
 
 - Internal resolution from 720p up to 4K.
 - 30, 60 or 120 FPS (the simulation runs at the chosen rate; game speed stays the original).
-- Borderless fullscreen or windowed.
+- Borderless fullscreen or windowed. The picture always keeps the chosen aspect ratio, with black bars when the screen has
+  another shape.
+- **Experimental** ultrawide (21:9 and 32:9): wider 3D view, with the HUD and menus filling the screen.
 - Game text in English (original), Brazilian Portuguese, French or Spanish.
 - Launcher in English, Portuguese, French and Spanish, with ready-made shortcuts for Steam/Playnite.
 
@@ -156,8 +160,8 @@ it runs as a native Windows program.
 
 ### Playing
 
-Open the **Bleach Soul Resurrección** shortcut. In the launcher pick the resolution, FPS, display mode and the
-game text language, then click **Play**. The launcher remembers your dump; an `.iso` is mounted by Windows
+Open the **Bleach Soul Resurrección** shortcut. In the launcher pick the resolution, FPS, display mode, aspect
+ratio and the game text language, then click **Play**. The launcher remembers your dump; an `.iso` is mounted by Windows
 automatically while the game runs.
 
 - **Saves and settings:** `%LOCALAPPDATA%\BleachSoulResurreccion` (the uninstaller asks whether to remove them).
@@ -165,12 +169,12 @@ automatically while the game runs.
   that they are kept on disk.
 - **Esc does not quit the game.** To quit, use the game's menu, the window's close button or Alt+F4.
 - **Shortcuts without the launcher:** see the *Launch options* folder in the install folder (`--play`, `--fps`,
-  `--display`, `--resolution`, `--text`).
+  `--display`, `--resolution`, `--aspect`, `--text`).
 
 ### Known issues
 
-- This version always runs at 16:9. Ultrawide support (21:9 / 32:9) is in development and will come in an
-  update.
+- Ultrawide (21:9 / 32:9) is still experimental: some screen may have elements out of place. If you find one, please
+  open an issue with a screenshot. For the original experience, use 16:9.
 - If the game closes with an error, the logs are in `%LOCALAPPDATA%\BleachSoulResurreccion\logs` (the install
   log is `logs\instalacao.log`). Please open an issue with them.
 

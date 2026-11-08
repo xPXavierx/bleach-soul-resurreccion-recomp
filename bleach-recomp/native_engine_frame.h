@@ -7,6 +7,7 @@
 #include <cmath>
 #include <initializer_list>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -479,6 +480,37 @@ extern "C" int32_t bleach_camera_step(double value,int site) {
     c=total-step;
     return step;
 }
+/* State kept per key (an object, or an object and a call site) by the tick scaling below: 8 ways per set, the
+ * least recently used way replaced. These were direct-mapped, and a key sharing its entry with another one
+ * lost its state on every call: Rukia's model in episode 5 shared the elapsed-ticks entry of its motion command
+ * (site 2FF394) with an unrelated object, so the command read 1 tick where 4 had passed and her intro pose clock
+ * ran at 1/4 at 120 Hz, holding the turn to gameplay 4.6 s. Which keys collide depends only on the addresses,
+ * so it hit one character and not the others. BLEACH_SLOT_LOG=1 (debug) reports a key still in use replaced. */
+namespace {
+template<class T,unsigned SetBits,uint32_t Mult=0x9E3779B1u>
+struct BleachKeyedTable {
+    struct Way {uint32_t key; uint64_t used; T value;};   // used: tick + 1, 0 = empty
+    Way ways[8u<<SetBits];
+    T& at(uint32_t key,bool& fresh) {
+        const uint64_t now=bleach_native_updates.load(std::memory_order_relaxed)+1;
+        Way* set=ways+(((key*Mult)>>(32-SetBits))<<3);
+        Way* oldest=set;
+        for(int i=0;i<8;++i) {
+            if(set[i].used&&set[i].key==key) {set[i].used=now; fresh=false; return set[i].value;}
+            if(set[i].used<oldest->used)oldest=set+i;
+        }
+        static const bool log=[] {const char* e=getenv("BLEACH_SLOT_LOG");return e&&!strcmp(e,"1");}();
+        if(log&&oldest->used&&now-oldest->used<=4) {
+            static std::atomic<uint64_t> n{0}; const uint64_t k=n.fetch_add(1);
+            if(!(k&4095))fprintf(stderr,"[slot] %llu keys in use replaced (table of %u, tick %llu)\n",(unsigned long long)k+1,8u<<SetBits,(unsigned long long)now);
+        }
+        *oldest=Way{key,now,T{}};
+        fresh=true;
+        return oldest->value;
+    }
+    T& at(uint32_t key) {bool fresh; return at(key,fresh);}
+};
+}
 /* Sub-steps per tick for an object without a time effect (func_0002D9F4, keyed by its
  * argument): the game's 4 per original 30 Hz update, split over the ticks that now make one up.
  * An object updated every tick gets 4/r (r = bleach_tick_ratio). One updated only every few
@@ -489,8 +521,8 @@ extern "C" int32_t bleach_camera_step(double value,int site) {
  * A gap longer than r ticks (a paused object, a new one at a reused address) restarts at
  * 4/r instead of jumping. Calls within one tick get the same count. */
 namespace {
-struct BleachSubstepSlot {uint32_t key; uint32_t count; uint64_t tick;};
-thread_local BleachSubstepSlot bleach_substep_slots[1024];
+struct BleachSubstepSlot {uint32_t count; uint64_t tick;};
+thread_local BleachKeyedTable<BleachSubstepSlot,9> bleach_substep_slots;
 }
 /* Sub-step requests made by the innermost scene task running (BLEACH_TASK_CENSUS). */
 static thread_local unsigned bleach_task_substep_calls=0;
@@ -501,11 +533,12 @@ extern "C" int bleach_substeps_for(uint32_t key) {
     const int base=4/ratio;
     if(ratio==1)return 4;
     const uint64_t tick=bleach_native_updates.load(std::memory_order_relaxed);
-    BleachSubstepSlot& slot=bleach_substep_slots[(key*0x9E3779B1u)>>22];
-    if(slot.key==key&&slot.tick==tick)return (int)slot.count;
-    const uint64_t elapsed=slot.key==key?tick-slot.tick:0;
+    bool fresh;
+    BleachSubstepSlot& slot=bleach_substep_slots.at(key,fresh);
+    if(!fresh&&slot.tick==tick)return (int)slot.count;
+    const uint64_t elapsed=fresh?0:tick-slot.tick;
     const int count=elapsed>=2&&elapsed<=(uint64_t)ratio?(int)(4*elapsed/ratio):base;
-    slot={key,(uint32_t)count,tick};
+    slot={(uint32_t)count,tick};
     return count;
 }
 /* Ticks since the last call with this key, for a consumer of a per-tick step stored elsewhere:
@@ -515,18 +548,16 @@ extern "C" int bleach_substeps_for(uint32_t key) {
  * pose reads the step the actor stores every tick (a quarter at 120 Hz) but is run by an
  * opening task kept at 30 Hz, and advanced a quarter of its time: the turn to gameplay came
  * 4.5 s late. A BLEACH_TASK_HALF task or held-back call counts as r. */
-namespace {
-struct BleachElapsedSlot {uint32_t key; uint64_t tick;};
-thread_local BleachElapsedSlot bleach_elapsed_slots[1024];
-}
+namespace { thread_local BleachKeyedTable<uint64_t,9> bleach_elapsed_slots; }
 extern "C" int bleach_elapsed_ticks(uint32_t key) {
     const int ratio=bleach_tick_ratio_now<1?1:(bleach_tick_ratio_now>4?4:bleach_tick_ratio_now);
     if(ratio==1)return 1;
     if(bleach_in_half_task)return ratio;
     const uint64_t tick=bleach_native_updates.load(std::memory_order_relaxed);
-    BleachElapsedSlot& slot=bleach_elapsed_slots[(key*0x9E3779B1u)>>22];
-    const uint64_t elapsed=slot.key==key?tick-slot.tick:0;
-    slot={key,tick};
+    bool fresh;
+    uint64_t& last=bleach_elapsed_slots.at(key,fresh);
+    const uint64_t elapsed=fresh?0:tick-last;
+    last=tick;
     return elapsed>=2&&elapsed<=(uint64_t)ratio?(int)elapsed:1;
 }
 /* Original updates (30 Hz frames) that passed for a per-update countdown run every time its object
@@ -537,18 +568,19 @@ extern "C" int bleach_elapsed_ticks(uint32_t key) {
  * while it is not 0) is counted down by func_0022A15C on every run; Ichigo's Ignition start runs
  * it from the actor update every tick, so its camera cuts came r times early and the close-up
  * "blinked" at 120 Hz while his motion (the step at +0x1C, already per tick) kept its speed. */
-namespace { thread_local BleachElapsedSlot bleach_frame_slots[1024]; }
+namespace { thread_local BleachKeyedTable<int64_t,9> bleach_frame_slots; }
 extern "C" int bleach_update_frames(uint32_t key) {
     static const bool on=[] {const char* e=getenv("BLEACH_CLOCK_FIX");return !(e&&!strcmp(e,"0"));}();
     const int ratio=bleach_tick_ratio_now<1?1:(bleach_tick_ratio_now>4?4:bleach_tick_ratio_now);
     if(ratio==1||!on)return 1;
     if(bleach_in_half_task)return 1;
     const int64_t tick=(int64_t)bleach_native_updates.load(std::memory_order_relaxed);
-    BleachElapsedSlot& slot=bleach_frame_slots[(key*0x9E3779B1u)>>22];
-    if(slot.key==key&&(int64_t)slot.tick==tick)return 0;   // again in the same tick
-    const int64_t gap=slot.key==key?tick-(int64_t)slot.tick:1;
+    bool fresh;
+    int64_t& last=bleach_frame_slots.at(key,fresh);
+    if(!fresh&&last==tick)return 0;   // again in the same tick
+    const int64_t gap=fresh?1:tick-last;
     const int64_t elapsed=gap>=1&&gap<=ratio?gap:1;
-    slot={key,(uint64_t)tick};
+    last=tick;
     return (int)((tick+1)/ratio-(tick+1-elapsed)/ratio);
 }
 /* Step of the real-time event timeline (func_00308AFC adds the global step at 0x71B8C4, 0x1000 =
@@ -557,7 +589,7 @@ extern "C" int bleach_update_frames(uint32_t key) {
  * Ignition special move's camera stepped 30 times a second at 60/120 Hz. Each tick adds the
  * step times the ticks it stands for over r (bleach_elapsed_ticks: a caller held at 30 Hz gets
  * it whole), the remainder carried per object, so the timeline keeps the original length. */
-namespace { struct BleachStepSlot {uint32_t key; int64_t rem;}; thread_local BleachStepSlot bleach_step_slots[4096]; }
+namespace { thread_local BleachKeyedTable<int64_t,9> bleach_step_slots; }
 /* An amount the original adds once per update (a frame of a timeline or an animation), spread over the
  * ticks: amount x ticks covered / r, the remainder carried per key, so r ticks add exactly the amount. */
 extern "C" int32_t bleach_per_update(int32_t amount,uint32_t key) {
@@ -565,11 +597,10 @@ extern "C" int32_t bleach_per_update(int32_t amount,uint32_t key) {
     const int ratio=bleach_tick_ratio_now<1?1:(bleach_tick_ratio_now>4?4:bleach_tick_ratio_now);
     if(ratio==1||!on)return amount;
     const int64_t elapsed=bleach_elapsed_ticks(key^0x5A5A5A5Au);
-    BleachStepSlot& slot=bleach_step_slots[(key*0x9E3779B1u)>>20];
-    if(slot.key!=key)slot={key,0};
-    const int64_t total=(int64_t)amount*elapsed+slot.rem;
+    int64_t& rem=bleach_step_slots.at(key);
+    const int64_t total=(int64_t)amount*elapsed+rem;
     const int64_t part=total>=0?total/ratio:-((-total)/ratio);
-    slot.rem=total-part*ratio;
+    rem=total-part*ratio;
     return (int32_t)part;
 }
 extern "C" int32_t bleach_event_step(int32_t step,uint32_t key) { return bleach_per_update(step,key^0x308C54u); }
@@ -583,11 +614,12 @@ extern "C" int32_t bleach_event_step(int32_t step,uint32_t key) { return bleach_
  * step x ticks covered / r with the remainder carried; exact step as is. */
 extern "C" void bleach_step_log(uint32_t object,int32_t step,int elapsed);
 namespace {
-struct BleachStepKind {uint32_t key; uint8_t kind; int32_t carry;};
-thread_local BleachStepKind bleach_step_kinds[4096];
+struct BleachStepKind {uint8_t kind; int32_t carry;};
+thread_local BleachKeyedTable<BleachStepKind,9> bleach_step_kinds;
 BleachStepKind& bleach_step_slot(uint32_t object) {
-    BleachStepKind& s=bleach_step_kinds[(object*0x9E3779B1u)>>20];
-    if(s.key!=object)s={object,1,0};   // unknown: as stored by the init, an original step
+    bool fresh;
+    BleachStepKind& s=bleach_step_kinds.at(object,fresh);
+    if(fresh)s={1,0};   // unknown: as stored by the init, an original step
     return s;
 }
 }
@@ -615,6 +647,18 @@ extern "C" int32_t bleach_model_step(uint32_t object,int32_t step) {
  * the event tracks' seek and the motion code) -- with the caller. Every second of simulation, the objects that
  * advanced more than 1.3x the original 30 frames a second are printed: a model playing too fast. */
 extern "C" void bleach_anim_log(char path,uint32_t object,int32_t delta,uint32_t caller) {
+    // BLEACH_ANIM_TRACE=<hex object> (debug): each run of that object's animation with a new (path, caller, delta, ticks since)
+    static const uint32_t traced=[] {const char* e=getenv("BLEACH_ANIM_TRACE");return e?(uint32_t)strtoul(e,nullptr,16):0u;}();
+    if(traced&&object==traced) {
+        static std::unordered_map<uint64_t,uint64_t> last_tick; static std::unordered_map<std::string,int> seen;
+        const uint64_t tick=bleach_native_updates.load(std::memory_order_relaxed);
+        const uint64_t key=((uint64_t)caller<<8)|(uint8_t)path;
+        const uint64_t gap=last_tick.count(key)?tick-last_tick[key]:0;
+        last_tick[key]=tick;
+        char id[96]; snprintf(id,sizeof id,"%c %08x %x %llu %d",path,caller,(unsigned)delta,(unsigned long long)gap,(int)bleach_in_half_task);
+        if(seen[id]++==0&&seen.size()<2000)
+            fprintf(stderr,"[animtrace] tick %llu %s (path caller delta gap in_half_task) event_clock %x\n",(unsigned long long)tick,id,vm_read32(0x00ADCB64));
+    }
     static const bool on=[] {const char* e=getenv("BLEACH_ANIM_LOG");return e&&!strcmp(e,"1");}();
     if(!on)return;
     struct Sum {int64_t total=0; uint32_t calls=0, caller=0; char path=0;};
@@ -706,13 +750,10 @@ static bool bleach_clock_task(uint32_t target) {
     return false;
 }
 namespace {
-struct BleachClockRem {uint32_t key; int32_t rem; double last; uint64_t tick;};
-thread_local BleachClockRem bleach_clock_rems[4096];
+struct BleachClockRem {int32_t rem; double last; uint64_t tick;};
+thread_local BleachKeyedTable<BleachClockRem,10,0x85EBCA6Bu> bleach_clock_rems;
 BleachClockRem& bleach_clock_slot(uint32_t ea,uint32_t site) {
-    const uint32_t key=ea^(site*0x9E3779B1u);
-    BleachClockRem& r=bleach_clock_rems[(key*0x85EBCA6Bu)>>20];
-    if(r.key!=key)r={key,0,0.0,0};
-    return r;
+    return bleach_clock_rems.at(ea^(site*0x9E3779B1u));
 }
 /* true for a jump (wrap, reload): much larger than the last change kept at this address */
 bool bleach_clock_jump(BleachClockRem& r,double d) {

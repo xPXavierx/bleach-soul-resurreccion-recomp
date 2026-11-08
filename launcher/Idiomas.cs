@@ -39,7 +39,7 @@ static class L
         { "modo_tela", new[] { "DISPLAY MODE", "MODO DE TELA", "MODE D'AFFICHAGE", "MODO DE PANTALLA" } },
         { "sem_borda", new[] { "Borderless", "Sem borda", "Sans bordure", "Sin bordes" } },
         { "janela", new[] { "Windowed", "Janela", "Fenêtré", "Ventana" } },
-        { "proporcao", new[] { "ASPECT RATIO", "PROPORÇÃO", "FORMAT D'IMAGE", "RELACIÓN DE ASPECTO" } },
+        { "proporcao", new[] { "ASPECT RATIO (EXPERIMENTAL)", "PROPORÇÃO (EXPERIMENTAL)", "FORMAT (EXPÉRIMENTAL)", "FORMATO (EXPERIMENTAL)" } },
         { "auto", new[] { "Auto", "Auto", "Auto", "Auto" } },
         { "jogo", new[] { "GAME", "JOGO", "JEU", "JUEGO" } },
         { "escolher_jogo", new[] { "Choose game…", "Escolher jogo…", "Choisir le jeu…", "Elegir juego…" } },
@@ -143,7 +143,7 @@ static class L
             "  --fps 30|60|120                         frame rate\r\n" +
             "  --display borderless|windowed           borderless fullscreen or a window\r\n" +
             "  --resolution 720p|1080p|1440p|4K       internal resolution\r\n" +
-            "  --aspect auto|16:9|21:9|32:9            monitor shape (ultrawide: wider view, HUD kept 16:9)\r\n" +
+            "  --aspect auto|16:9|21:9|32:9            picture shape, experimental (ultrawide: wider view, HUD and menus fill the screen)\r\n" +
             "  --text en|br|fr|es                      the game's text: English, Brazilian Portuguese, French, Spanish\r\n\r\n" +
             "Example: --play --fps 60 --display borderless --resolution 1440p\r\n" +
             "Anything not given uses the launcher's last settings.\r\n",
@@ -153,7 +153,7 @@ static class L
             "  --fps 30|60|120                         taxa de quadros\r\n" +
             "  --tela semborda|janela                  tela cheia sem borda ou janela\r\n" +
             "  --resolucao 720p|1080p|1440p|4K         resolução interna\r\n" +
-            "  --proporcao auto|16:9|21:9|32:9         formato do monitor (ultrawide: visão mais larga, HUD em 16:9)\r\n" +
+            "  --proporcao auto|16:9|21:9|32:9         formato da imagem, experimental (ultrawide: visão mais larga, HUD e menus preenchem a tela)\r\n" +
             "  --texto en|br|fr|es                     texto do jogo: inglês, português do Brasil, francês, espanhol\r\n\r\n" +
             "Exemplo: --jogar --fps 60 --tela semborda --resolucao 1440p\r\n" +
             "O que não for informado usa a última configuração do launcher.\r\n",
@@ -163,7 +163,7 @@ static class L
             "  --fps 30|60|120                         fréquence d'images\r\n" +
             "  --display borderless|windowed           plein écran sans bordure ou fenêtre\r\n" +
             "  --resolution 720p|1080p|1440p|4K       résolution interne\r\n" +
-            "  --aspect auto|16:9|21:9|32:9            format de l'écran (ultrawide : vue plus large, HUD en 16:9)\r\n" +
+            "  --aspect auto|16:9|21:9|32:9            format de l'image, expérimental (ultrawide : vue plus large, HUD et menus sur tout l'écran)\r\n" +
             "  --text en|br|fr|es                      texte du jeu : anglais, portugais du Brésil, français, espagnol\r\n\r\n" +
             "Exemple : --play --fps 60 --display borderless --resolution 1440p\r\n" +
             "Ce qui n'est pas indiqué reprend les derniers réglages du launcher.\r\n",
@@ -173,7 +173,7 @@ static class L
             "  --fps 30|60|120                         fotogramas por segundo\r\n" +
             "  --display borderless|windowed           pantalla completa sin bordes o ventana\r\n" +
             "  --resolution 720p|1080p|1440p|4K       resolución interna\r\n" +
-            "  --aspect auto|16:9|21:9|32:9            formato del monitor (ultrawide: vista más amplia, HUD en 16:9)\r\n" +
+            "  --aspect auto|16:9|21:9|32:9            formato de la imagen, experimental (ultrawide: vista más amplia, HUD y menús llenan la pantalla)\r\n" +
             "  --text en|br|fr|es                      texto del juego: inglés, portugués de Brasil, francés, español\r\n\r\n" +
             "Ejemplo: --play --fps 60 --display borderless --resolution 1440p\r\n" +
             "Lo que no se indique usa la última configuración del launcher.\r\n" } },

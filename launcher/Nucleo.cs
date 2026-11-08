@@ -481,8 +481,8 @@ static class Execucao
     // the game); an "exclusiva" saved by an older launcher becomes borderless.
     public static string Tela(string salva) { return salva == "janela" ? "janela" : "semborda"; }
 
-    // Ultrawide is still being tuned: builds without ULTRAWIDE (compilar.sh without "ultrawide", the v1
-    // release) hide the option and always run the game 16:9.
+    // Builds without ULTRAWIDE (compilar.sh without "ultrawide", the v1 release) hide the option and
+    // always run the game 16:9; montar-instalador.py defines it.
 #if ULTRAWIDE
     public const bool Ultrawide = true;
 #else
