@@ -3,7 +3,6 @@
 **[Português](#português) · [English](#english)**
 
 ---
-
 ## English
 
 A static recompilation of **Bleach: Soul Resurrección** (PS3, BLUS30769) for Windows. The game's code is
@@ -104,7 +103,6 @@ python bleach-recomp/construir.py --elf EBOOT.elf --firmware <folder with libfon
   holders. All trademarks belong to their owners.
 
 ---
-
 ## Português
 
 Uma recompilação estática de **Bleach: Soul Resurrección** (PS3, BLUS30769) para Windows. O código do jogo é
