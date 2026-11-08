@@ -4,107 +4,6 @@
 
 ---
 
-## Português
-
-Uma recompilação estática de **Bleach: Soul Resurrección** (PS3, BLUS30769) para Windows. O código do jogo é
-traduzido de PowerPC/SPU para C++ e compilado como um programa nativo do Windows, com renderização em DirectX 12
-— não é um emulador.
-
-> **Este projeto não contém o jogo.** Nenhum código, arquivo, imagem, som, texto ou save do jogo é distribuído
-> aqui ou no instalador. Você precisa da sua própria cópia original do jogo (BLUS30769, a versão americana sem
-> atualização), obtida legalmente, por exemplo fazendo o dump do seu disco no seu PS3.
-
-### O que o recomp oferece
-
-- Resolução interna de 720p até 4K.
-- 30, 60 ou 120 FPS (a simulação roda na taxa escolhida; a velocidade do jogo continua a original).
-- Tela cheia sem borda ou janela. A imagem sempre mantém a proporção escolhida, com barras pretas quando a tela tem outro
-  formato.
-- Ultrawide **experimental** (21:9 e 32:9): visão 3D mais larga, com HUD e menus preenchendo a tela.
-- Texto do jogo em inglês (original), português do Brasil, francês ou espanhol.
-- Launcher em inglês, português, francês e espanhol, com atalhos prontos para Steam/Playnite.
-
-### Requisitos
-
-- Windows 10 ou 11, 64 bits.
-- Placa de vídeo com DirectX 12.
-- 8 GB de RAM recomendados.
-- 4 GB livres durante a instalação (depois o jogo ocupa cerca de 0,4 GB).
-- Internet durante a instalação.
-- Seu dump do **Bleach: Soul Resurrección BLUS30769**: o arquivo `.iso` ou a pasta com `PS3_GAME`.
-
-### Como instalar
-
-1. Baixe **`Bleach Soul Resurrección - Setup.exe`** na página de [Releases](../../releases).
-2. Abra o setup. A primeira tela verifica o seu PC e mostra o que vai ser baixado.
-3. Escolha a pasta de instalação e o seu jogo (`.iso` ou a pasta do dump). O setup confere se é o BLUS30769.
-4. Firmware do PS3: deixe **Baixar da Sony** (o setup baixa o `PS3UPDAT.PUP` oficial do servidor de
-   atualizações da Sony) ou escolha um `PS3UPDAT.PUP` que você já tenha. Só as fontes do sistema são usadas.
-5. Clique em **Instalar**. O setup então:
-   - decifra o `EBOOT.BIN` do **seu** jogo com o RPCS3;
-   - extrai as fontes e os módulos de fonte do firmware;
-   - baixa as ferramentas de compilação dos sites oficiais (Python, Capstone, CMake, Ninja e LLVM-MinGW,
-     cerca de 245 MB, cada arquivo conferido por SHA-256);
-   - **recompila o jogo no seu PC** (de 3 a 20 minutos, conforme o processador);
-   - apaga as ferramentas e cria os atalhos.
-
-Os downloads ficam guardados em `%LOCALAPPDATA%\BleachSoulResurreccion\downloads`; uma reinstalação ou
-atualização não baixa tudo de novo.
-
-#### Por que o RPCS3 vem junto?
-
-O [RPCS3](https://rpcs3.net) é o emulador de PS3 de código aberto (GPL v2). O setup usa o programa dele só para
-duas coisas: **decifrar o EBOOT do seu disco** e **ler o arquivo de firmware da Sony**. O jogo não roda no
-RPCS3; ele roda como um programa nativo do Windows.
-
-### Como jogar
-
-Abra o atalho **Bleach Soul Resurrección**. No launcher escolha resolução, FPS, modo de tela, proporção e o idioma do
-texto do jogo, e clique em **Jogar**. O launcher lembra o seu dump; se ele for um `.iso`, o Windows o monta sozinho
-enquanto o jogo roda.
-
-- **Saves e configurações:** `%LOCALAPPDATA%\BleachSoulResurreccion` (o desinstalador pergunta se deve apagá-los).
-- **Shaders:** na primeira vez que cada cena aparece, o jogo prepara os shaders dela e pode dar uma pausa curta;
-  depois eles ficam guardados no disco.
-- **Esc não fecha o jogo.** Para sair, use o menu do jogo, o botão de fechar da janela ou Alt+F4.
-- **Atalhos sem launcher:** veja a pasta *Opções de execução* na pasta de instalação (`--jogar`, `--fps`,
-  `--tela`, `--resolucao`, `--proporcao`, `--texto`).
-
-### Problemas conhecidos
-
-- O ultrawide (21:9 / 32:9) ainda é experimental: alguma tela pode ter elementos fora do lugar. Se encontrar uma, abra
-  uma *issue* com um print. Para a experiência original, use 16:9.
-- Se o jogo fechar com erro, os logs ficam em `%LOCALAPPDATA%\BleachSoulResurreccion\logs` (e o da instalação em
-  `logs\instalacao.log`). Abra uma *issue* com eles.
-
-### Para desenvolvedores
-
-| Pasta | Conteúdo |
-|---|---|
-| `ps3recomp/` | O SDK [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT) com as alterações deste projeto (runtime, HLE, renderizador D3D12). |
-| `bleach-recomp/` | O código próprio do recomp (`main.cpp`, `native_*.h`, `CMakeLists.txt`), os manifestos e `construir.py`, que gera e compila tudo a partir do EBOOT decifrado. |
-| `bleach-recomp/edicoes-recompilado.json` | As correções feitas à mão no código gerado, gravadas como *hash* das linhas originais + linhas novas (o código do jogo não está nele). |
-| `launcher/` | Launcher e setup (C#, .NET Framework 4, `csc`). `montar-instalador.py` monta o setup. |
-| `traducao/` | Traduções do texto do jogo: só os textos traduzidos e o *hash* do texto original. |
-
-Compilar à mão (com Python 3.11 + `capstone`, LLVM-MinGW, CMake e Ninja):
-
-```
-python bleach-recomp/construir.py --elf EBOOT.elf --firmware <pasta com libfont.prx, libfontFT.prx, libfreetype.prx, libresc.prx> --kit . --toolchain <llvm-mingw>\bin --cmake cmake.exe --ninja ninja.exe --trabalho build --saida bin
-```
-
-### Créditos
-
-- **ps3recomp** — sp00nznet e colaboradores (MIT).
-- **RPCS3** — equipe RPCS3 (GPL v2): decifração do EBOOT e do firmware, e referência de comportamento do PS3.
-- **FFmpeg** (GPL v3) — vídeos do jogo. **LLVM-MinGW** (mstorsjo), **CMake**, **Ninja**, **Python**, **Capstone**.
-- Recompilação, correções, launcher e traduções: este projeto.
-- *Bleach* © Tite Kubo/Shueisha, TV Tokyo, dentsu, Pierrot. *Bleach: Soul Resurrección* (desenvolvido pela Racjin)
-  pertence aos seus respectivos donos. Este é um projeto de fãs, sem fins lucrativos e sem ligação com esses
-  titulares. Todas as marcas pertencem aos seus donos.
-
----
-
 ## English
 
 A static recompilation of **Bleach: Soul Resurrección** (PS3, BLUS30769) for Windows. The game's code is
@@ -203,3 +102,104 @@ python bleach-recomp/construir.py --elf EBOOT.elf --firmware <folder with libfon
 - *Bleach* © Tite Kubo/Shueisha, TV Tokyo, dentsu, Pierrot. *Bleach: Soul Resurrección* (developed by Racjin)
   belongs to its respective owners. This is a non-commercial fan project, not affiliated with those rights
   holders. All trademarks belong to their owners.
+
+---
+
+## Português
+
+Uma recompilação estática de **Bleach: Soul Resurrección** (PS3, BLUS30769) para Windows. O código do jogo é
+traduzido de PowerPC/SPU para C++ e compilado como um programa nativo do Windows, com renderização em DirectX 12
+— não é um emulador.
+
+> **Este projeto não contém o jogo.** Nenhum código, arquivo, imagem, som, texto ou save do jogo é distribuído
+> aqui ou no instalador. Você precisa da sua própria cópia original do jogo (BLUS30769, a versão americana sem
+> atualização), obtida legalmente, por exemplo fazendo o dump do seu disco no seu PS3.
+
+### O que o recomp oferece
+
+- Resolução interna de 720p até 4K.
+- 30, 60 ou 120 FPS (a simulação roda na taxa escolhida; a velocidade do jogo continua a original).
+- Tela cheia sem borda ou janela. A imagem sempre mantém a proporção escolhida, com barras pretas quando a tela tem outro
+  formato.
+- Ultrawide **experimental** (21:9 e 32:9): visão 3D mais larga, com HUD e menus preenchendo a tela.
+- Texto do jogo em inglês (original), português do Brasil, francês ou espanhol.
+- Launcher em inglês, português, francês e espanhol, com atalhos prontos para Steam/Playnite.
+
+### Requisitos
+
+- Windows 10 ou 11, 64 bits.
+- Placa de vídeo com DirectX 12.
+- 8 GB de RAM recomendados.
+- 4 GB livres durante a instalação (depois o jogo ocupa cerca de 0,4 GB).
+- Internet durante a instalação.
+- Seu dump do **Bleach: Soul Resurrección BLUS30769**: o arquivo `.iso` ou a pasta com `PS3_GAME`.
+
+### Como instalar
+
+1. Baixe **`Bleach Soul Resurrección - Setup.exe`** na página de [Releases](../../releases).
+2. Abra o setup. A primeira tela verifica o seu PC e mostra o que vai ser baixado.
+3. Escolha a pasta de instalação e o seu jogo (`.iso` ou a pasta do dump). O setup confere se é o BLUS30769.
+4. Firmware do PS3: deixe **Baixar da Sony** (o setup baixa o `PS3UPDAT.PUP` oficial do servidor de
+   atualizações da Sony) ou escolha um `PS3UPDAT.PUP` que você já tenha. Só as fontes do sistema são usadas.
+5. Clique em **Instalar**. O setup então:
+   - decifra o `EBOOT.BIN` do **seu** jogo com o RPCS3;
+   - extrai as fontes e os módulos de fonte do firmware;
+   - baixa as ferramentas de compilação dos sites oficiais (Python, Capstone, CMake, Ninja e LLVM-MinGW,
+     cerca de 245 MB, cada arquivo conferido por SHA-256);
+   - **recompila o jogo no seu PC** (de 3 a 20 minutos, conforme o processador);
+   - apaga as ferramentas e cria os atalhos.
+
+Os downloads ficam guardados em `%LOCALAPPDATA%\BleachSoulResurreccion\downloads`; uma reinstalação ou
+atualização não baixa tudo de novo.
+
+#### Por que o RPCS3 vem junto?
+
+O [RPCS3](https://rpcs3.net) é o emulador de PS3 de código aberto (GPL v2). O setup usa o programa dele só para
+duas coisas: **decifrar o EBOOT do seu disco** e **ler o arquivo de firmware da Sony**. O jogo não roda no
+RPCS3; ele roda como um programa nativo do Windows.
+
+### Como jogar
+
+Abra o atalho **Bleach Soul Resurrección**. No launcher escolha resolução, FPS, modo de tela, proporção e o idioma do
+texto do jogo, e clique em **Jogar**. O launcher lembra o seu dump; se ele for um `.iso`, o Windows o monta sozinho
+enquanto o jogo roda.
+
+- **Saves e configurações:** `%LOCALAPPDATA%\BleachSoulResurreccion` (o desinstalador pergunta se deve apagá-los).
+- **Shaders:** na primeira vez que cada cena aparece, o jogo prepara os shaders dela e pode dar uma pausa curta;
+  depois eles ficam guardados no disco.
+- **Esc não fecha o jogo.** Para sair, use o menu do jogo, o botão de fechar da janela ou Alt+F4.
+- **Atalhos sem launcher:** veja a pasta *Opções de execução* na pasta de instalação (`--jogar`, `--fps`,
+  `--tela`, `--resolucao`, `--proporcao`, `--texto`).
+
+### Problemas conhecidos
+
+- O ultrawide (21:9 / 32:9) ainda é experimental: alguma tela pode ter elementos fora do lugar. Se encontrar uma, abra
+  uma *issue* com um print. Para a experiência original, use 16:9.
+- Se o jogo fechar com erro, os logs ficam em `%LOCALAPPDATA%\BleachSoulResurreccion\logs` (e o da instalação em
+  `logs\instalacao.log`). Abra uma *issue* com eles.
+
+### Para desenvolvedores
+
+| Pasta | Conteúdo |
+|---|---|
+| `ps3recomp/` | O SDK [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT) com as alterações deste projeto (runtime, HLE, renderizador D3D12). |
+| `bleach-recomp/` | O código próprio do recomp (`main.cpp`, `native_*.h`, `CMakeLists.txt`), os manifestos e `construir.py`, que gera e compila tudo a partir do EBOOT decifrado. |
+| `bleach-recomp/edicoes-recompilado.json` | As correções feitas à mão no código gerado, gravadas como *hash* das linhas originais + linhas novas (o código do jogo não está nele). |
+| `launcher/` | Launcher e setup (C#, .NET Framework 4, `csc`). `montar-instalador.py` monta o setup. |
+| `traducao/` | Traduções do texto do jogo: só os textos traduzidos e o *hash* do texto original. |
+
+Compilar à mão (com Python 3.11 + `capstone`, LLVM-MinGW, CMake e Ninja):
+
+```
+python bleach-recomp/construir.py --elf EBOOT.elf --firmware <pasta com libfont.prx, libfontFT.prx, libfreetype.prx, libresc.prx> --kit . --toolchain <llvm-mingw>\bin --cmake cmake.exe --ninja ninja.exe --trabalho build --saida bin
+```
+
+### Créditos
+
+- **ps3recomp** — sp00nznet e colaboradores (MIT).
+- **RPCS3** — equipe RPCS3 (GPL v2): decifração do EBOOT e do firmware, e referência de comportamento do PS3.
+- **FFmpeg** (GPL v3) — vídeos do jogo. **LLVM-MinGW** (mstorsjo), **CMake**, **Ninja**, **Python**, **Capstone**.
+- Recompilação, correções, launcher e traduções: este projeto.
+- *Bleach* © Tite Kubo/Shueisha, TV Tokyo, dentsu, Pierrot. *Bleach: Soul Resurrección* (desenvolvido pela Racjin)
+  pertence aos seus respectivos donos. Este é um projeto de fãs, sem fins lucrativos e sem ligação com esses
+  titulares. Todas as marcas pertencem aos seus donos.
