@@ -1,6 +1,7 @@
 # Bleach: Soul Resurrección — PC Recomp
 
 [![Listed on PlayPorted](https://playported.com/badge.svg)](https://playported.com/ports/1330-bleach-soul-resurreccion/)
+[![Support / Apoiar no Ko-fi](https://img.shields.io/badge/Support%20%2F%20Apoiar-Ko--fi-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/pxavier)
 
 **[Português](#português) · [English](#english)**
 
@@ -14,6 +15,12 @@ not an emulator.
 > **This project does not contain the game.** No game code, files, images, sound, text or saves are distributed
 > here or in the setup. You need your own, legally obtained copy of the game (BLUS30769, the US release without
 > updates), for example a dump of your own disc made on your own PS3.
+
+### Support my work
+
+If you enjoy this project and would like to support my work on the recomp, you can contribute through
+**[Ko-fi](https://ko-fi.com/pxavier)**. Your support helps me dedicate time to development, fixes and improvements.
+Contributions are entirely optional, and the project remains free for everyone. Thank you!
 
 ### What the recomp offers
 
@@ -114,6 +121,12 @@ traduzido de PowerPC/SPU para C++ e compilado como um programa nativo do Windows
 > **Este projeto não contém o jogo.** Nenhum código, arquivo, imagem, som, texto ou save do jogo é distribuído
 > aqui ou no instalador. Você precisa da sua própria cópia original do jogo (BLUS30769, a versão americana sem
 > atualização), obtida legalmente, por exemplo fazendo o dump do seu disco no seu PS3.
+
+### Apoie meu trabalho
+
+Se você gostou do projeto e deseja apoiar meu trabalho no recomp, pode contribuir pelo
+**[Ko-fi](https://ko-fi.com/pxavier)**. Seu apoio me ajuda a dedicar tempo ao desenvolvimento, às correções e às melhorias.
+As contribuições são totalmente opcionais, e o projeto continua gratuito para todos. Obrigado!
 
 ### O que o recomp oferece
 
