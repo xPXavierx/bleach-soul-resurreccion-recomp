@@ -1,5 +1,7 @@
 # Bleach: Soul Resurrección — PC Recomp
 
+[![Listed on PlayPorted](https://playported.com/badge.svg)](https://playported.com/ports/1330-bleach-soul-resurreccion/)
+
 **[Português](#português) · [English](#english)**
 
 ---
