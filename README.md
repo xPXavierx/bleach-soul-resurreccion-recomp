@@ -1,7 +1,7 @@
 # Bleach: Soul Resurrección — PC Recomp
 
 [![Listed on PlayPorted](https://playported.com/badge.svg)](https://playported.com/ports/1330-bleach-soul-resurreccion/)
-[![Support / Apoiar no Ko-fi](https://img.shields.io/badge/Support%20%2F%20Apoiar-Ko--fi-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/pxavier)
+[![Support / Apoiar no Ko-fi](.github/assets/kofi-button.svg)](https://ko-fi.com/pxavier)
 
 **[Português](#português) · [English](#english)**
 
