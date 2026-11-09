@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('verify', Path(__file__).parents[1] / 'verify-setup.py')
 verify = importlib.util.module_from_spec(spec)
@@ -86,6 +87,20 @@ class VerificationTests(unittest.TestCase):
         self.context['release']['asset']['digest'] = 'sha256:' + '0' * 64
         code, report = self.run_comparison(published)
         self.assertEqual((code, report['status']), (1, 'error'))
+
+    def test_latest_resolves_the_release_tag_not_main(self):
+        release = {'id': 123, 'tag_name': 'v1.1', 'target_commitish': 'main',
+                   'html_url': 'https://example.invalid/v1.1', 'draft': False,
+                   'assets': [{'name': verify.ASSET, 'id': 456, 'size': 13}]}
+        with patch.object(verify, 'api', return_value=release) as request, \
+             patch.object(verify.subprocess, 'run'), \
+             patch.object(verify.subprocess, 'check_output', return_value='c' * 40 + '\n') as git, \
+             patch.dict(verify.os.environ, {}, clear=True):
+            result = verify.resolve('owner/repo', '@latest', 'a' * 40, 'b' * 40, self.root / 'source.json')
+        request.assert_called_once_with('repos/owner/repo/releases/latest')
+        git.assert_called_once_with(['git', 'rev-parse', '--verify', 'refs/tags/v1.1^{commit}'], text=True)
+        self.assertEqual(result['source_commit'], 'c' * 40)
+        self.assertEqual(result['release']['tag'], 'v1.1')
 
 
 if __name__ == '__main__':

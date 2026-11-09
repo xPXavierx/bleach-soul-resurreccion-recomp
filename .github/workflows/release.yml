@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Published release to rebuild and compare (e.g. v1.1). Blank: test current commit only.'
+        description: '@latest: compare latest published release. Or enter a tag (v1.1). Blank: build test only.'
         type: string
         required: false
-        default: ''
+        default: '@latest'
   push:
     tags: ['v*']
 
