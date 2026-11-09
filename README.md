@@ -1,10 +1,5 @@
 # Bleach: Soul Resurrección — PC Recomp
 
-**Installer verification / Verificação do instalador:**
-[Reproducible builds, SHA-256 comparison and attestations](docs/installer-verification.md).
-The historical v1.1 installer is not claimed to be reproducible with the new recipe.
-O instalador histórico da v1.1 não é considerado reproduzível com a nova receita.
-
 [![Support / Apoiar no Ko-fi](.github/assets/kofi-button.svg)](https://ko-fi.com/pxavier)
 
 **[Português](#português) · [English](#english)**
@@ -96,10 +91,16 @@ automatically while the game runs.
 | `ps3recomp/` | The [ps3recomp](https://github.com/sp00nznet/ps3recomp) SDK (MIT) with this project's changes (runtime, HLE, D3D12 renderer). |
 | `bleach-recomp/` | The recomp's own code (`main.cpp`, `native_*.h`, `CMakeLists.txt`), the manifests and `construir.py`, which generates and builds everything from the decrypted EBOOT. |
 | `bleach-recomp/edicoes-recompilado.json` | The hand fixes to the generated code, stored as hashes of the original lines + the new lines (the game's code is not in it). |
-| `launcher/` | Launcher and setup (C#, .NET Framework 4, `csc`). `montar-instalador.py` builds the setup. |
+| `launcher/` | Launcher and setup (C#, .NET Framework 4.8). `montar-instalador-ci.py` builds the complete installer with the tools prepared by `prepare-build.ps1`. |
 | `traducao/` | Game text translations: only the translated strings and a hash of each original string. |
 
-Building by hand (with Python 3.11 + `capstone`, LLVM-MinGW, CMake and Ninja):
+**Build the installer:** you can generate the complete **`Bleach Soul Resurrección - Setup.exe`** from this
+public repository by following the [manual build instructions](docs/installer-verification.md#rebuild-locally-powershell-7-windows).
+The steps prepare the required tools, compile the launcher and setup, and package the installer. Building the
+installer does not require a game dump or PS3 firmware; those are supplied by the player when installing the game.
+
+**Build the game manually** (with your decrypted EBOOT, the firmware modules, Python 3.11 + `capstone`,
+LLVM-MinGW, CMake and Ninja):
 
 ```
 python bleach-recomp/construir.py --elf EBOOT.elf --firmware <folder with libfont.prx, libfontFT.prx, libfreetype.prx, libresc.prx> --kit . --toolchain <llvm-mingw>\bin --cmake cmake.exe --ninja ninja.exe --trabalho build --saida bin
@@ -202,10 +203,16 @@ enquanto o jogo roda.
 | `ps3recomp/` | O SDK [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT) com as alterações deste projeto (runtime, HLE, renderizador D3D12). |
 | `bleach-recomp/` | O código próprio do recomp (`main.cpp`, `native_*.h`, `CMakeLists.txt`), os manifestos e `construir.py`, que gera e compila tudo a partir do EBOOT decifrado. |
 | `bleach-recomp/edicoes-recompilado.json` | As correções feitas à mão no código gerado, gravadas como *hash* das linhas originais + linhas novas (o código do jogo não está nele). |
-| `launcher/` | Launcher e setup (C#, .NET Framework 4, `csc`). `montar-instalador.py` monta o setup. |
+| `launcher/` | Launcher e setup (C#, .NET Framework 4.8). `montar-instalador-ci.py` gera o instalador completo com as ferramentas preparadas por `prepare-build.ps1`. |
 | `traducao/` | Traduções do texto do jogo: só os textos traduzidos e o *hash* do texto original. |
 
-Compilar à mão (com Python 3.11 + `capstone`, LLVM-MinGW, CMake e Ninja):
+**Compilar o instalador:** você pode gerar o **`Bleach Soul Resurrección - Setup.exe`** completo a partir deste
+repositório público seguindo o [passo a passo de compilação manual](docs/installer-verification.md#rebuild-locally-powershell-7-windows).
+As etapas preparam as ferramentas necessárias, compilam o launcher e o setup e montam o instalador. Para gerar
+o instalador, não é preciso ter o dump do jogo nem o firmware do PS3; o jogador fornece esses arquivos durante a instalação.
+
+**Compilar o jogo manualmente** (com seu EBOOT decifrado, os módulos de firmware, Python 3.11 + `capstone`,
+LLVM-MinGW, CMake e Ninja):
 
 ```
 python bleach-recomp/construir.py --elf EBOOT.elf --firmware <pasta com libfont.prx, libfontFT.prx, libfreetype.prx, libresc.prx> --kit . --toolchain <llvm-mingw>\bin --cmake cmake.exe --ninja ninja.exe --trabalho build --saida bin
