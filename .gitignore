@@ -20,6 +20,9 @@ build-*/
 out/
 scratch/
 __pycache__/
+dist*/
+snapshot/
+source.tar
 *.exe
 *.dll
 *.obj

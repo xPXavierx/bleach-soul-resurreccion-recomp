@@ -1,5 +1,10 @@
 # Bleach: Soul Resurrección — PC Recomp
 
+**Installer verification / Verificação do instalador:**
+[Reproducible builds, SHA-256 comparison and attestations](docs/installer-verification.md).
+The historical v1.1 installer is not claimed to be reproducible with the new recipe.
+O instalador histórico da v1.1 não é considerado reproduzível com a nova receita.
+
 [![Support / Apoiar no Ko-fi](.github/assets/kofi-button.svg)](https://ko-fi.com/pxavier)
 
 **[Português](#português) · [English](#english)**
