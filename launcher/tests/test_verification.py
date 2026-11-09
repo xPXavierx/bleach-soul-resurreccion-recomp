@@ -33,7 +33,7 @@ class VerificationTests(unittest.TestCase):
         return folder
 
     def run_comparison(self, published=None):
-        with contextlib.redirect_stdout(io.StringIO()):
+        with contextlib.redirect_stdout(io.StringIO()), patch.dict(verify.os.environ, {}, clear=True):
             result = verify.compare(self.context, self.a, self.b, self.root / 'evidence', published)
         report = json.loads((self.root / 'evidence/verification.json').read_text())
         return result, report
