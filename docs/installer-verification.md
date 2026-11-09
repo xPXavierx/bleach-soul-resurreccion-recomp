@@ -2,8 +2,9 @@
 
 ## Run a verification
 
-Open **Actions → Build setup → Run workflow**. Enter an existing release tag,
-such as `v1.1`, in `release_tag`. The workflow resolves that tag to a full commit
+Open **Actions → Build setup → Run workflow**. The default `release_tag` value
+`@latest` compares the latest published release automatically. You can also enter
+an existing release tag such as `v1.1`. The workflow resolves that tag to a full commit
 ID, rebuilds its installer twice on separate clean Windows runners, downloads
 the release's exact `Bleach.Soul.Resurreccion.-.Setup.exe` asset and compares all
 three complete files using SHA-256. It never runs the downloaded installer.

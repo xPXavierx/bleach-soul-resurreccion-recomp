@@ -46,10 +46,14 @@ def resolve(repository, tag, source_commit, recipe_commit, output):
                'run_url': os.getenv('GITHUB_SERVER_URL', 'https://github.com') + '/' + repository +
                           '/actions/runs/' + os.getenv('GITHUB_RUN_ID', 'local')}
     if tag:
+        release = api('repos/' + repository + '/releases/latest') if tag == '@latest' else None
+        if release is not None:
+            tag = release['tag_name']
         # Never use release.target_commitish (it can just say "main"). Resolve the tag itself.
         subprocess.run(['git', 'check-ref-format', 'refs/tags/' + tag], check=True)
         commit = subprocess.check_output(['git', 'rev-parse', '--verify', 'refs/tags/' + tag + '^{commit}'], text=True).strip()
-        release = api('repos/' + repository + '/releases/tags/' + urllib.parse.quote(tag, safe=''))
+        if release is None:
+            release = api('repos/' + repository + '/releases/tags/' + urllib.parse.quote(tag, safe=''))
         assets = [a for a in release['assets'] if a['name'] == ASSET]
         if len(assets) != 1 or release['draft']:
             raise ValueError('Expected exactly one published installer named ' + ASSET)
