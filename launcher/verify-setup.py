@@ -41,6 +41,8 @@ def api(path):
 def resolve(repository, tag, source_commit, recipe_commit, output):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
         raise ValueError('Invalid repository')
+    if tag == '@build':
+        tag = ''
     context = {'schema': 1, 'repository': repository, 'recipe_commit': recipe_commit,
                'source_commit': source_commit, 'release': None,
                'run_url': os.getenv('GITHUB_SERVER_URL', 'https://github.com') + '/' + repository +
