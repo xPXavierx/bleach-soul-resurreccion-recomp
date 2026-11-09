@@ -1,19 +1,16 @@
-"""Builds "Bleach Soul Resurrección - Setup.exe" from this repository, on GitHub Actions (or any Windows PC).
+"""Deterministic setup build from a clean source snapshot and SHA-256 locked tools.
 
-Same package as montar-instalador.py, but it only uses what is in the repository plus the official
-third-party builds, downloaded here and checked against the files shipped in the v1.1 setup:
-  - RPCS3 v0.0.30-16061-85f4c38b (GPL v2), from github.com/RPCS3/rpcs3-binaries-win
-  - FFmpeg essentials 2026-09-02-git-9fc8c785e2 (GPL v3), gyan.dev build from github.com/GyanD/codexffmpeg
-It skips the hand-edit check of montar-instalador.py (that one needs the game's EBOOT, which never
-goes to GitHub); the edits used are the committed bleach-recomp/edicoes-recompilado.json.
-Usage: python launcher/montar-instalador-ci.py --rpcs3 <rpcs3 folder> --ffmpeg <ffmpeg folder> [--saida <folder>]"""
-import argparse, hashlib, shutil, struct, subprocess, zipfile
+See docs/installer-verification.md. This builds the installer, not the game:
+the player supplies the EBOOT and firmware on their own computer.
+"""
+import argparse, hashlib, json, os, platform, shutil, struct, subprocess, sys, zipfile, zlib
 from pathlib import Path
 
 aqui = Path(__file__).resolve().parent          # launcher/
 raiz = aqui.parent                              # repository root
 NOME = 'Bleach Soul Resurrección - Setup.exe'
-csc = Path('C:/Windows/Microsoft.NET/Framework64/v4.0.30319/csc.exe')
+csc = None
+refs = None
 HOST = ['CMakeLists.txt', 'main.cpp', 'stubs.cpp', 'sail_bridge.cpp', 'generate_spu_variants.py',
         'generate_native_kernels.py', 'patch_game_timing.py', 'generate_fonts.py', 'spu-manifest.json',
         'font-manifest.json', 'construir.py', 'gerar_edicoes.py', 'edicoes-recompilado.json']
@@ -45,9 +42,15 @@ def copiar(origem, destino):
 
 
 def compilar_cs(saida_exe, fontes, extras):
-    subprocess.run([str(csc), '/nologo', '/target:winexe', '/codepage:65001', '/win32icon:icone-recomp.ico', '/define:ULTRAWIDE',
-                    '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll',
-                    '/r:System.Web.Extensions.dll', '/lib:' + str(csc.parent / 'WPF'), '/r:UIAutomationClient.dll', '/r:UIAutomationTypes.dll'] + extras + ['/out:' + str(saida_exe)] + fontes,
+    references = ['mscorlib', 'System', 'System.Core', 'System.Windows.Forms', 'System.Drawing',
+                  'System.Web.Extensions', 'UIAutomationClient', 'UIAutomationTypes',
+                  'System.IO.Compression', 'System.IO.Compression.FileSystem']
+    subprocess.run([str(csc), '/nologo', '/noconfig', '/nostdlib+', '/deterministic+',
+                    '/debug-', '/optimize+', '/platform:anycpu', '/langversion:5',
+                    '/pathmap:' + str(raiz) + '=/_/src,' + str(saida_exe.parent) + '=/_/out',
+                    '/target:winexe', '/codepage:65001', '/win32icon:icone-recomp.ico', '/define:ULTRAWIDE'] +
+                   ['/r:' + str(refs / (name + '.dll')) for name in references] +
+                   extras + ['/out:' + str(saida_exe)] + fontes,
                    check=True, cwd=aqui)
 
 
@@ -65,17 +68,16 @@ def kit(destino):
         copiar(h, destino / 'bleach-recomp' / h.name)
 
 
-def montar(rpcs3, ffmpeg, saida):
+def montar(rpcs3, ffmpeg, saida, obra):
     conferir(rpcs3 / 'rpcs3.exe')
     conferir(ffmpeg / 'bin' / 'ffmpeg.exe')
-    obra = raiz / 'build-setup'
-    if obra.exists(): shutil.rmtree(obra)
+    if obra.exists(): raise SystemExit('Use a new build directory: ' + str(obra))
     stage = obra / 'stage-setup'
     stage.mkdir(parents=True)
     compilar_cs(stage / 'Bleach Launcher.exe', ['Launcher.cs', 'Nucleo.cs', 'Visual.cs', 'Idiomas.cs', 'Traducao.cs'], [])
     stub = obra / 'Instalador-setup.exe'
     compilar_cs(stub, ['Instalador.cs', 'Compilacao.cs', 'Nucleo.cs', 'Visual.cs', 'Idiomas.cs'],
-                ['/win32manifest:instalador.manifest', '/r:System.IO.Compression.dll', '/r:System.IO.Compression.FileSystem.dll'])
+                ['/win32manifest:instalador.manifest'])
     copiar(aqui / 'configuracao.json', stage / 'configuracao.json')
     copiar(ffmpeg / 'bin' / 'ffmpeg.exe', stage / 'bin' / 'ffmpeg.exe')
     for f in rpcs3.iterdir():
@@ -83,7 +85,7 @@ def montar(rpcs3, ffmpeg, saida):
     shutil.copytree(rpcs3 / 'qt6', stage / 'rpcs3' / 'qt6')
     for idioma in ('pt', 'fr', 'es'):
         f = raiz / 'traducao' / (idioma + '.json')
-        if f.exists(): copiar(f, stage / 'traducao' / f.name)
+        copiar(f, stage / 'traducao' / f.name)
     kit(stage / 'fonte')
     lic = stage / 'licencas'
     copiar(ffmpeg / 'LICENSE', lic / 'ffmpeg-LICENSE.txt')
@@ -91,31 +93,59 @@ def montar(rpcs3, ffmpeg, saida):
     (lic / 'LEIA-ME.txt').write_text(
         'bin\\ffmpeg.exe: FFmpeg (https://ffmpeg.org), "essentials" build from gyan.dev, GPL v3 (ffmpeg-LICENSE.txt).\r\n'
         'Source code: https://ffmpeg.org/download.html\r\n\r\n'
-        'rpcs3\\: RPCS3 v0.0.30-16061-85f4c38b (https://rpcs3.net), GPL v2. Source code: https://github.com/RPCS3/rpcs3\r\n'
+        'rpcs3\\: RPCS3 v0.0.39-18794-b30a44c1 (https://rpcs3.net), GPL v2. Source code: https://github.com/RPCS3/rpcs3/tree/b30a44c1367635af0675f61504e1ca45263655c6\r\n'
         'Used only to decrypt the EBOOT from your own dump and to read the official PS3 firmware.\r\n\r\n'
         'fonte\\ps3recomp\\: ps3recomp (https://github.com/sp00nznet/ps3recomp), MIT (ps3recomp-LICENSE.txt), with this\r\n'
         'project\'s changes. fonte\\bleach-recomp\\: this project\'s recomp code.\r\n\r\n'
         'Downloaded by the installer from the official sites (not included in the installer): Python (PSF License), Capstone (BSD),\r\n'
         'CMake (BSD), Ninja (Apache 2.0), LLVM-MinGW (Apache 2.0 with LLVM exception, mingw-w64: ZPL/its own licenses).\r\n'
-        'The PS3 firmware is downloaded from Sony\'s official server or chosen by you.\r\n', encoding='utf-8')
+        'The PS3 firmware is downloaded from Sony\'s official server or chosen by you.\r\n', encoding='utf-8', newline='')
     pacote = obra / 'stage-setup.zip'
     with zipfile.ZipFile(pacote, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
-        for f in sorted(stage.rglob('*')):
-            if f.is_file(): z.write(f, f.relative_to(stage).as_posix())
+        for f in sorted(stage.rglob('*'), key=lambda p: p.relative_to(stage).as_posix()):
+            if f.is_file():
+                info = zipfile.ZipInfo(f.relative_to(stage).as_posix(), (1980, 1, 1, 0, 0, 0))
+                info.create_system = 3
+                info.external_attr = 0o100644 << 16
+                info.compress_type = zipfile.ZIP_DEFLATED
+                z.writestr(info, f.read_bytes(), compresslevel=6)
     saida.mkdir(parents=True, exist_ok=True)
     final = saida / NOME
     tamanho = pacote.stat().st_size
-    with open(final, 'wb') as o:
-        o.write(stub.read_bytes())
-        with open(pacote, 'rb') as z: shutil.copyfileobj(z, o, 1 << 22)
-        o.write(struct.pack('<q', tamanho)); o.write(b'BLEACHPK')
+    with open(final, 'wb') as output:
+        output.write(stub.read_bytes())
+        with open(pacote, 'rb') as z: shutil.copyfileobj(z, output, 1 << 22)
+        output.write(struct.pack('<q', tamanho)); output.write(b'BLEACHPK')
     print('%s  %.0f MB  sha256 %s' % (final, final.stat().st_size / 1e6, sha256(final)))
+    files = {f.relative_to(stage).as_posix(): sha256(f)
+             for f in sorted(stage.rglob('*')) if f.is_file()}
+    report = {'schema': 1, 'source_commit': o.source_commit, 'recipe_commit': o.recipe_commit,
+              'installer': {'name': NOME, 'sha256': sha256(final), 'size': final.stat().st_size},
+              'stub_sha256': sha256(stub), 'payload_files': files,
+              'inputs': json.loads((o.tools / 'build-inputs.json').read_text(encoding='utf-8')),
+              'environment': {'python': platform.python_version(), 'zlib': zlib.ZLIB_RUNTIME_VERSION,
+                              'os': platform.platform(), 'image': os.getenv('ImageVersion'),
+                              'compiler_sha256': sha256(csc),
+                              'references': {f.name: sha256(f) for f in refs.glob('*.dll')}}}
+    (saida / 'build.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8', newline='')
 
 
 if __name__ == '__main__':
     a = argparse.ArgumentParser()
-    a.add_argument('--rpcs3', required=True, type=Path)
-    a.add_argument('--ffmpeg', required=True, type=Path)
+    a.add_argument('--source', required=True, type=Path, help='Clean git archive of the source commit')
+    a.add_argument('--source-commit', required=True)
+    a.add_argument('--recipe-commit', required=True)
+    a.add_argument('--tools', required=True, type=Path, help='Directory created by prepare-build.ps1')
+    a.add_argument('--work', required=True, type=Path)
     a.add_argument('--saida', default=raiz / 'dist', type=Path)
     o = a.parse_args()
-    montar(o.rpcs3.resolve(), o.ffmpeg.resolve(), o.saida.resolve())
+    raiz = o.source.resolve()
+    aqui = raiz / 'launcher'
+    o.tools = o.tools.resolve()
+    lock = json.loads((o.tools / 'build-inputs.json').read_text(encoding='utf-8'))
+    if platform.python_version() != lock['python_version'] or zlib.ZLIB_RUNTIME_VERSION != lock['zlib_version']:
+        raise SystemExit('Use the locked Python and zlib versions from prepare-build.ps1')
+    csc = o.tools / 'roslyn/tasks/net472/csc.exe'
+    refs = o.tools / 'net48/build/.NETFramework/v4.8'
+    montar(o.tools / 'rpcs3', o.tools / 'ffmpeg/ffmpeg-2026-09-02-git-9fc8c785e2-essentials_build',
+           o.saida.resolve(), o.work.resolve())
