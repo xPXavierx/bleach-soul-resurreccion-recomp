@@ -1,0 +1,69 @@
+# Builds the setup on GitHub's own Windows machine, straight from this repository, and attests it:
+# anyone can check that the .exe in a release came from this code (gh attestation verify).
+# Run it by hand (Actions > Build setup > Run workflow) to test, or push a tag (v1.2) to publish a release.
+name: Build setup
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write       # create the release
+  id-token: write       # sign the attestation
+  attestations: write
+
+jobs:
+  setup:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RPCS3_COMMIT: 85f4c38b4e                          # RPCS3 v0.0.30-16061
+      FFMPEG_VER: 2026-09-02-git-9fc8c785e2             # gyan.dev essentials build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download RPCS3 (official build)
+        shell: pwsh
+        run: |
+          $sha = gh api "repos/RPCS3/rpcs3/commits/$env:RPCS3_COMMIT" --jq .sha
+          $tag = "build-$sha"
+          $asset = gh release view $tag -R RPCS3/rpcs3-binaries-win --json assets --jq '.assets[].name' |
+                   Where-Object { $_ -like '*_win64*.7z' } | Select-Object -First 1
+          if (-not $asset) { throw "RPCS3 build $tag not found" }
+          gh release download $tag -R RPCS3/rpcs3-binaries-win -p $asset -D third
+          7z x "third/$asset" -othird/rpcs3 -y | Out-Null
+
+      - name: Download FFmpeg (gyan.dev build)
+        shell: pwsh
+        run: |
+          $name = "ffmpeg-$env:FFMPEG_VER-essentials_build"
+          gh release download $env:FFMPEG_VER -R GyanD/codexffmpeg -p "$name.zip" -D third
+          7z x "third/$name.zip" -othird -y | Out-Null
+          Move-Item "third/$name" third/ffmpeg
+
+      - name: Build setup
+        run: python launcher/montar-instalador-ci.py --rpcs3 third/rpcs3 --ffmpeg third/ffmpeg --saida dist
+
+      - name: Attest (proves this .exe was built here, from this commit)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup
+          path: dist/*.exe
+
+      - name: Publish release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem dist/*.exe | Select-Object -First 1
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          $notes = "Built by GitHub Actions from commit $env:GITHUB_SHA.`n`nSHA-256: ``$hash```n`nVerify: ``gh attestation verify `"$($exe.Name)`" -R $env:GITHUB_REPOSITORY``"
+          gh release create $env:GITHUB_REF_NAME $exe.FullName --title $env:GITHUB_REF_NAME --notes $notes
