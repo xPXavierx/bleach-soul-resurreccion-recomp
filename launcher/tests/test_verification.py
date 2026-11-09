@@ -102,6 +102,13 @@ class VerificationTests(unittest.TestCase):
         self.assertEqual(result['source_commit'], 'c' * 40)
         self.assertEqual(result['release']['tag'], 'v1.1')
 
+    def test_explicit_build_mode_does_not_resolve_a_release(self):
+        with patch.object(verify, 'api') as request, patch.dict(verify.os.environ, {}, clear=True):
+            result = verify.resolve('owner/repo', '@build', 'a' * 40, 'b' * 40, self.root / 'source.json')
+        request.assert_not_called()
+        self.assertEqual(result['source_commit'], 'a' * 40)
+        self.assertIsNone(result['release'])
+
 
 if __name__ == '__main__':
     unittest.main()

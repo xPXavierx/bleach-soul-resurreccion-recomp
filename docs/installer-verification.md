@@ -16,8 +16,9 @@ attestation. The `build-a` and `build-b` artifacts contain build logs, installer
 and manifests even when a later comparison fails. Artifacts are retained for
 90 days; download them for longer retention. GitHub run logs are public.
 
-Leave `release_tag` blank to test the selected branch/commit without comparing
+Set `release_tag` to `@build` to test the selected branch/commit without comparing
 a release. Its result is explicitly `reproducible-build`, not `verified`.
+Do not rely on an empty field: GitHub may replace it with the `@latest` default.
 Manual runs never create or replace a release.
 
 ## What changed from v1.1

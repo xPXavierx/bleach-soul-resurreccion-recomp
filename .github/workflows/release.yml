@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: '@latest: compare latest published release. Or enter a tag (v1.1). Blank: build test only.'
+        description: '@latest: compare latest release. Or a tag (v1.1). @build: build selected commit only.'
         type: string
         required: false
         default: '@latest'
