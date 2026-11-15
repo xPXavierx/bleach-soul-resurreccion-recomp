@@ -39,6 +39,9 @@ static class L
         { "modo_tela", new[] { "DISPLAY MODE", "MODO DE TELA", "MODE D'AFFICHAGE", "MODO DE PANTALLA" } },
         { "sem_borda", new[] { "Borderless", "Sem borda", "Sans bordure", "Sin bordes" } },
         { "janela", new[] { "Windowed", "Janela", "Fenêtré", "Ventana" } },
+        { "vsync", new[] { "V-SYNC", "V-SYNC", "V-SYNC", "V-SYNC" } },
+        { "sim", new[] { "On", "Sim", "Oui", "Sí" } },
+        { "nao", new[] { "Off", "Não", "Non", "No" } },
         { "proporcao", new[] { "ASPECT RATIO (EXPERIMENTAL)", "PROPORÇÃO (EXPERIMENTAL)", "FORMAT (EXPÉRIMENTAL)", "FORMATO (EXPERIMENTAL)" } },
         { "auto", new[] { "Auto", "Auto", "Auto", "Auto" } },
         { "jogo", new[] { "GAME", "JOGO", "JEU", "JUEGO" } },
@@ -142,6 +145,7 @@ static class L
             "  --play                                  the settings last chosen in the launcher\r\n" +
             "  --fps 30|60|120                         frame rate\r\n" +
             "  --display borderless|windowed           borderless fullscreen or a window\r\n" +
+            "  --vsync on|off                          V-Sync (off: no wait for the monitor, may tear)\r\n" +
             "  --resolution 720p|1080p|1440p|4K       internal resolution\r\n" +
             "  --aspect auto|16:9|21:9|32:9            picture shape, experimental (ultrawide: wider view, HUD and menus fill the screen)\r\n" +
             "  --text en|br|fr|es                      the game's text: English, Brazilian Portuguese, French, Spanish\r\n\r\n" +
@@ -152,6 +156,7 @@ static class L
             "  --jogar                                 a última configuração escolhida no launcher\r\n" +
             "  --fps 30|60|120                         taxa de quadros\r\n" +
             "  --tela semborda|janela                  tela cheia sem borda ou janela\r\n" +
+            "  --vsync on|off                          V-Sync (off: sem esperar o monitor, pode haver tearing)\r\n" +
             "  --resolucao 720p|1080p|1440p|4K         resolução interna\r\n" +
             "  --proporcao auto|16:9|21:9|32:9         formato da imagem, experimental (ultrawide: visão mais larga, HUD e menus preenchem a tela)\r\n" +
             "  --texto en|br|fr|es                     texto do jogo: inglês, português do Brasil, francês, espanhol\r\n\r\n" +
@@ -162,6 +167,7 @@ static class L
             "  --play                                  les derniers réglages choisis dans le launcher\r\n" +
             "  --fps 30|60|120                         fréquence d'images\r\n" +
             "  --display borderless|windowed           plein écran sans bordure ou fenêtre\r\n" +
+            "  --vsync on|off                          V-Sync (off : sans attendre l'écran, déchirement possible)\r\n" +
             "  --resolution 720p|1080p|1440p|4K       résolution interne\r\n" +
             "  --aspect auto|16:9|21:9|32:9            format de l'image, expérimental (ultrawide : vue plus large, HUD et menus sur tout l'écran)\r\n" +
             "  --text en|br|fr|es                      texte du jeu : anglais, portugais du Brésil, français, espagnol\r\n\r\n" +
@@ -172,6 +178,7 @@ static class L
             "  --play                                  la última configuración elegida en el launcher\r\n" +
             "  --fps 30|60|120                         fotogramas por segundo\r\n" +
             "  --display borderless|windowed           pantalla completa sin bordes o ventana\r\n" +
+            "  --vsync on|off                          V-Sync (off: sin esperar al monitor, puede haber tearing)\r\n" +
             "  --resolution 720p|1080p|1440p|4K       resolución interna\r\n" +
             "  --aspect auto|16:9|21:9|32:9            formato de la imagen, experimental (ultrawide: vista más amplia, HUD y menús llenan la pantalla)\r\n" +
             "  --text en|br|fr|es                      texto del juego: inglés, portugués de Brasil, francés, español\r\n\r\n" +

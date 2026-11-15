@@ -54,8 +54,8 @@ class JanelaLauncher : Form
 {
     readonly Opcoes cfg;
     Image fundo;
-    Grupo resolucao, fps, tela, idioma, texto, proporcao;
-    Label rotuloJogo, rResolucao, rFps, rTela, rJogo, rTexto, rProporcao;
+    Grupo resolucao, fps, tela, vsync, idioma, texto, proporcao;
+    Label rotuloJogo, rResolucao, rFps, rTela, rVsync, rJogo, rTexto, rProporcao;
     Opcao trocar;
     Func<string> estado = () => "";   // the game line, rebuilt when the language changes
     BotaoJogar jogar;
@@ -97,7 +97,7 @@ class JanelaLauncher : Form
 
     void SalvarCfg()
     {
-        cfg["resolucao"] = resolucao.Valor; cfg["fps"] = fps.Valor; cfg["tela"] = tela.Valor; cfg["idioma"] = L.Idioma;
+        cfg["resolucao"] = resolucao.Valor; cfg["fps"] = fps.Valor; cfg["tela"] = tela.Valor; cfg["vsync"] = vsync.Valor; cfg["idioma"] = L.Idioma;
         cfg["proporcao"] = proporcao.Valor;
         if (Traducao.AlgumDisponivel) cfg["texto"] = texto.Valor;
         if (raizJogo != null) cfg["jogo"] = raizJogo;
@@ -119,7 +119,11 @@ class JanelaLauncher : Form
         rFps = Rotulo("", 352, y0);
         fps = new Grupo(this, 352, y0 + 20, 60, "30", "30", "60", "60", "120", "120");
         rTela = Rotulo("", 560, y0);
-        tela = new Grupo(this, 560, y0 + 20, 104, "", "semborda", "", "janela");
+        tela = new Grupo(this, 560, y0 + 20, 100, "", "semborda", "", "janela");
+        // V-Sync off presents at once and may tear (VRR monitors and the lowest latency).
+        rVsync = Rotulo("", 780, y0);
+        vsync = new Grupo(this, 780, y0 + 20, 52, "", "on", "", "off");
+        vsync.Valor = Execucao.VSync(cfg["vsync"]);
         resolucao.Valor = cfg.Ou("resolucao", "4K"); fps.Valor = cfg.Ou("fps", "60"); tela.Valor = Execucao.Tela(cfg["tela"]);
         if (resolucao.Valor == null) resolucao.Valor = "4K";
         if (fps.Valor == null) fps.Valor = "60";
@@ -178,6 +182,7 @@ class JanelaLauncher : Form
     {
         rResolucao.Text = L.T("resolucao"); rFps.Text = L.T("fps"); rTela.Text = L.T("modo_tela"); rJogo.Text = L.T("jogo"); rTexto.Text = L.T("texto_jogo");
         tela.Opcoes[0].Text = L.T("sem_borda"); tela.Opcoes[1].Text = L.T("janela");
+        rVsync.Text = L.T("vsync"); vsync.Opcoes[0].Text = L.T("sim"); vsync.Opcoes[1].Text = L.T("nao");
         rProporcao.Text = L.T("proporcao"); proporcao.Opcoes[0].Text = L.T("auto");
         trocar.Text = L.T("escolher_jogo"); jogar.Text = L.T("jogar");
         rotuloJogo.Text = estado();
@@ -297,12 +302,12 @@ class JanelaLauncher : Form
         string raiz = dump.Abrir();
         Cursor = Cursors.Default;
         if (raiz == null) { MessageBox.Show(this, L.T("nao_abriu"), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
-        string res = resolucao.Valor, f = fps.Valor, t = tela.Valor, tx = texto.Valor, pr = proporcao.Valor;
+        string res = resolucao.Valor, f = fps.Valor, t = tela.Valor, tx = texto.Valor, pr = proporcao.Valor, vs = vsync.Valor;
         Hide();
         var thread = new System.Threading.Thread(() =>
         {
             int codigo; string falha = null;
-            try { codigo = Execucao.Rodar(raiz, firmware, res, f, t, Traducao.Preparar(raiz, tx), pr); }
+            try { codigo = Execucao.Rodar(raiz, firmware, res, f, t, Traducao.Preparar(raiz, tx), pr, vs); }
             catch (Exception ex) { codigo = -1; falha = ex.Message; }
             dump.Fechar();
             BeginInvoke((Action)delegate
@@ -365,7 +370,7 @@ static class Programa
                 if (erro != null) { MessageBox.Show(erro, Instalacao.Titulo, MessageBoxButtons.OK, MessageBoxIcon.Warning); return 1; }
             }
             int codigo = Execucao.Rodar(raiz, firmware, cfg.Ou("resolucao", "4K"), cfg.Ou("fps", "60"), Execucao.Tela(cfg["tela"]),
-                                        Traducao.Preparar(raiz, TextoDoJogo(cfg)), cfg["proporcao"]);
+                                        Traducao.Preparar(raiz, TextoDoJogo(cfg)), cfg["proporcao"], Execucao.VSync(cfg["vsync"]));
             dump.Fechar();
             if (codigo != 0) AvisarErro(null);
             return codigo;
@@ -399,6 +404,7 @@ static class Programa
             if (vm == "br" || vm == "pt-br") vm = "pt";   // the launcher shows Portuguese as BR
             if (a == "--jogar" || a == "--play" || a == "--jugar") direto = true;
             else if (a == "--fps" && (v == "30" || v == "60" || v == "120")) { cfg["fps"] = v; i++; }
+            else if (a == "--vsync" && (vm == "on" || vm == "off")) { cfg["vsync"] = vm; i++; }
             else if ((a == "--texto" || a == "--text") && (vm == "en" || Array.IndexOf(Traducao.Idiomas, vm) >= 0)) { cfg["texto"] = vm; i++; }
             else if ((a == "--tela" || a == "--display") && vm != null)
             {

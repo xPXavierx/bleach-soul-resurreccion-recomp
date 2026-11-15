@@ -117,8 +117,11 @@ static void* ppu_host_thread_proc(void* param)
      * then dies silently with an access violation INSIDE the handler and the
      * backtrace that would name the recursing function is lost. */
     { ULONG g = 256 * 1024; SetThreadStackGuarantee(&g); }
-    /* BLEACH_LANE_SAMPLE profiles secondary guest threads as tag 3. */
-    { extern void ps3_sample_register_thread(int); ps3_sample_register_thread(3); }
+    /* BLEACH_LANE_SAMPLE profiles secondary guest threads as tag 3; those named with the
+     * BLEACH_LANE_SAMPLE_SPLIT prefix as tag 5. */
+    { extern void ps3_sample_register_thread(int);
+      const char* split = getenv("BLEACH_LANE_SAMPLE_SPLIT");
+      ps3_sample_register_thread(split && split[0] && !strncmp(info->name, split, strlen(split)) ? 5 : 3); }
 #endif
 
     /* Register this thread's context for lwarx/stwcx cross-thread reservation

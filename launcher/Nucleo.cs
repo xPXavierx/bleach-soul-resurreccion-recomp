@@ -481,6 +481,9 @@ static class Execucao
     // the game); an "exclusiva" saved by an older launcher becomes borderless.
     public static string Tela(string salva) { return salva == "janela" ? "janela" : "semborda"; }
 
+    // V-Sync: "on" (the default) or "off".
+    public static string VSync(string salva) { return salva == "off" ? "off" : "on"; }
+
     // Builds without ULTRAWIDE (compilar.sh without "ultrawide", the v1 release) hide the option and
     // always run the game 16:9; montar-instalador.py defines it.
 #if ULTRAWIDE
@@ -495,7 +498,7 @@ static class Execucao
     }
 
     public static Dictionary<string, string> Ambiente(string raizJogo, string firmware, string resolucao, string fps, string tela,
-                                                       string overlay, string proporcao)
+                                                       string overlay, string proporcao, string vsync)
     {
         tela = Tela(tela);
         var e = new Dictionary<string, string>();
@@ -527,6 +530,7 @@ static class Execucao
         e["SPU_DUMP_MISS"] = Util.ParaJogo(Path.Combine(Instalacao.Logs, "spu-raw"));
 
         e["BLEACH_DISPLAY_MODE"] = tela;
+        e["BLEACH_VSYNC"] = VSync(vsync) == "on" ? "1" : "0";
         e["BLEACH_NATIVE_CAMERA"] = "0";
         int hz = fps == "120" ? 120 : fps == "60" ? 60 : 30;
         if (hz == 30) { e["BLEACH_EXPERIMENTAL_RENDER_HZ"] = "30"; e["BLEACH_PRESENT_PACE_HZ"] = "30"; }
@@ -563,7 +567,7 @@ static class Execucao
 
     // Starts the game and waits for it. Returns its exit code.
     public static int Rodar(string raizJogo, string firmware, string resolucao, string fps, string tela, string overlay,
-                            string proporcao)
+                            string proporcao, string vsync)
     {
         string dados = Instalacao.Dados;
         Directory.CreateDirectory(Instalacao.Logs);
@@ -576,7 +580,7 @@ static class Execucao
             RedirectStandardOutput = true, RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
         };
-        foreach (var kv in Ambiente(raizJogo, firmware, resolucao, fps, tela, overlay, proporcao))
+        foreach (var kv in Ambiente(raizJogo, firmware, resolucao, fps, tela, overlay, proporcao, vsync))
         {
             if (kv.Value == null) psi.EnvironmentVariables.Remove(kv.Key);
             else psi.EnvironmentVariables[kv.Key] = kv.Value;

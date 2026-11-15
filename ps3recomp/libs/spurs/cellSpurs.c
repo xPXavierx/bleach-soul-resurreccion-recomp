@@ -1831,7 +1831,10 @@ static DWORD WINAPI spurs_pm_worker(LPVOID p)
 #ifdef _WIN32
     { ULONG g = 256 * 1024; SetThreadStackGuarantee(&g); }
 #endif
-    lane_sample_register();
+    /* Lanes of an instance named with the BLEACH_LANE_SAMPLE_SPLIT prefix sample as tag 4. */
+    { const char* split = getenv("BLEACH_LANE_SAMPLE_SPLIT");
+      if (split && split[0] && !strncmp(si->prefix, split, strlen(split))) ps3_sample_register_thread(4);
+      else lane_sample_register(); }
     AcquireSRWLockExclusive(&si->lock);
     for (;;) {
         while (slot->native_reserved || (!slot->busy && !si->stopping))
@@ -1928,6 +1931,27 @@ static DWORD WINAPI spurs_kernel_thread(LPVOID p)
     return 0;
 }
 
+/* PS3_SPURS_PRIORITY=<prefix>:<level>[,...]: host priority (THREAD_PRIORITY_*, e.g. 1 above
+ * normal, 2 highest) for the threads of a SPURS instance whose name starts with <prefix>. On
+ * the console a small instance can own its SPU outright; here its threads compete with every
+ * other lane for the cores. Bleach's sound engine runs alone in "sgx-spurs-" (1 SPU) and has
+ * one 5.3 ms audio period per block: on a 4-core host it fell behind and the sound crackled. */
+static int spurs_instance_priority(const char* prefix)
+{
+    const char* e = getenv("PS3_SPURS_PRIORITY");
+    if (!e || !prefix[0]) return 0;
+    while (*e) {
+        const char* colon = strchr(e, ':');
+        if (!colon) break;
+        const size_t n = (size_t)(colon - e);
+        if (n && !strncmp(prefix, e, n)) return atoi(colon + 1);
+        e = strchr(colon, ',');
+        if (!e) break;
+        e++;
+    }
+    return 0;
+}
+
 static s32 spurs_scheduler_start(struct SpursInst* si)
 {
     si->job_batches = 0; si->extra_lanes = 0;
@@ -1943,6 +1967,12 @@ static s32 spurs_scheduler_start(struct SpursInst* si)
     }
     si->coordinator = CreateThread(NULL, 1u << 20, spurs_kernel_thread, si, 0, NULL);
     if (!si->coordinator) goto failed;
+    { const int prio = spurs_instance_priority(si->prefix);
+      if (prio) {
+          for (u32 sn = 0; sn < si->nspus; sn++) SetThreadPriority(si->slots[sn].thread, prio);
+          SetThreadPriority(si->coordinator, prio);
+          printf("[cellSpurs] \"%s\": host thread priority %d\n", si->prefix, prio);
+      } }
     return CELL_OK;
 failed:
     AcquireSRWLockExclusive(&si->lock);

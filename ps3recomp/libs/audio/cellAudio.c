@@ -144,6 +144,10 @@ static u64            s_audio_start_us = 0;
 
 /* Mixing thread */
 static unsigned long long g_audio_dropped;   /* frames the device had no room for */
+static unsigned long long g_audio_clipped;   /* mixed samples outside [-1, 1] (AUDIO_RATE) */
+static float g_audio_peak;                   /* largest mixed sample before the clip (AUDIO_RATE) */
+static unsigned long long g_audio_underruns; /* submits that found the device buffer empty */
+static unsigned long long g_audio_late;      /* blocks the guest wrote after they were mixed */
 static volatile int  s_mix_thread_running = 0;
 static thread_t      s_mix_thread;
 #ifndef _WIN32
@@ -361,6 +365,7 @@ static void audio_backend_submit(const float* stereo_samples, u32 num_samples)
     UINT32 padding = 0;
     s_wasapi_client->lpVtbl->GetCurrentPadding(s_wasapi_client, &padding);
 
+    { static unsigned submits; if (++submits > 50 && padding == 0) g_audio_underruns++; }   /* after start-up */
     UINT32 available = s_wasapi_buf_frames - padding;
     if (num_samples > available) {
         g_audio_dropped += num_samples - available;
@@ -433,6 +438,24 @@ static inline float ld_be_f32(const float* p)
     return f;
 }
 
+/* PS3_AUDIO_LEAD=<blocks> (default 0): the read index the guest sees runs this many
+ * blocks ahead of the block actually mixed. A title that writes the block at the
+ * published index right after each period event (Bleach: Soul Resurrección) has a
+ * single 5.3 ms period to do it; on a busy host (4 logical cores) it missed ~20% of
+ * them and the mixer played the cleared block -- crackling. Each block of lead gives
+ * it another period, at the cost of 5.3 ms of latency. Capped below the ring size. */
+static u64 audio_lead(u64 nblock)
+{
+    static int lead = -1;
+    if (lead < 0) { const char* e = getenv("PS3_AUDIO_LEAD"); lead = e ? atoi(e) : 0; if (lead < 0) lead = 0; }
+    return nblock > 2 && (u64)lead > nblock - 2 ? nblock - 2 : (u64)lead;
+}
+/* The guest's view of a port's read position (block counter). */
+static u64 audio_guest_index(const AudioPortSlot* port)
+{
+    return port->read_index + audio_lead(port->param.nBlock ? port->param.nBlock : 1);
+}
+
 /* Mix one block from all active ports into s_mix_buffer (stereo float) */
 static void audio_mix_one_block(void)
 {
@@ -472,6 +495,21 @@ static void audio_mix_one_block(void)
         u32 block_idx = (u32)(port->read_index % nblock);
         u32 block_offset = block_idx * CELL_AUDIO_BLOCK_SAMPLES * nch;
         float* src = port->buffer + block_offset;
+        /* AUDIO_RATE: a block mixed while empty (and cleared) that holds data later was
+         * written too late -- that period played silence. Counted once per block. */
+        { static u8 missed[CELL_AUDIO_PORT_MAX][32];
+          for (u32 b = 0; b < nblock && b < 32; b++) {
+              if (!missed[p][b]) continue;
+              const float* bp = port->buffer + b * CELL_AUDIO_BLOCK_SAMPLES * nch;
+              for (u32 s2 = 0; s2 < CELL_AUDIO_BLOCK_SAMPLES * nch; s2 += 8)
+                  if (bp[s2] != 0.0f) { g_audio_late++; missed[p][b] = 0; break; }
+          }
+          if (block_idx < 32) {
+              int empty = 1;
+              for (u32 s2 = 0; s2 < CELL_AUDIO_BLOCK_SAMPLES * nch; s2 += 8)
+                  if (src[s2] != 0.0f) { empty = 0; break; }
+              missed[p][block_idx] = (u8)empty;
+          } }
 
         /* AUDIO_PEAK diag: which blocks of this port's WHOLE ring hold data,
          * vs which block the read cursor is on -- distinguishes "writer never
@@ -528,13 +566,15 @@ static void audio_mix_one_block(void)
          * size directly; an unbounded counter walks beyond the audio buffer. */
         port->read_index++;
         if (port->read_idx_addr)
-            vm_write64((u32)port->read_idx_addr, port->read_index % nblock);
+            vm_write64((u32)port->read_idx_addr, audio_guest_index(port) % nblock);
     }
 
     mutex_unlock(&s_audio_mutex);
 
     /* Clip to [-1.0, 1.0] */
     for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES * 2; i++) {
+        { const float a = s_mix_buffer[i] < 0 ? -s_mix_buffer[i] : s_mix_buffer[i];
+          if (a > g_audio_peak) g_audio_peak = a; if (a > 1.0f) g_audio_clipped++; }
         if (s_mix_buffer[i] > 1.0f) s_mix_buffer[i] = 1.0f;
         if (s_mix_buffer[i] < -1.0f) s_mix_buffer[i] = -1.0f;
     }
@@ -606,7 +646,7 @@ static unsigned __stdcall audio_mix_thread_func(void* arg)
         audio_backend_submit(s_mix_buffer, CELL_AUDIO_BLOCK_SAMPLES);
         /* AUDIO_RATE=1: blocks mixed vs real time, and frames dropped. */
         { static int on = -1; if (on < 0) on = getenv("AUDIO_RATE") ? 1 : 0;
-          if (on) { static ULONGLONG t0; static unsigned n, z; static unsigned long long d0;
+          if (on) { static ULONGLONG t0; static unsigned n, z; static unsigned long long d0, c0, u0, l0;
             ULONGLONG now = GetTickCount64(); if (!t0) t0 = now; n++;
             { int nz = 0; for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES * 2; i++) if (s_mix_buffer[i] != 0.0f) { nz = 1; break; }
               if (!nz) z++; }
@@ -618,6 +658,10 @@ static unsigned __stdcall audio_mix_thread_func(void* arg)
 #else
                         0u, 10);
 #endif
+                fprintf(stderr, "[audio-rate] clipped %.0f samples/s, peak before clip %.2f, device underruns %llu, late blocks %llu%c",
+                        (g_audio_clipped - c0) * 1000.0 / (now - t0), g_audio_peak,
+                        g_audio_underruns - u0, g_audio_late - l0, 10);
+                c0 = g_audio_clipped; u0 = g_audio_underruns; l0 = g_audio_late; g_audio_peak = 0.0f;
                 n = z = 0; d0 = g_audio_dropped; t0 = now; } } }
 
         /* Notify event queues */
@@ -932,8 +976,9 @@ s32 cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, u64* tag)
         mutex_unlock(&s_audio_mutex);
         return CELL_AUDIO_ERROR_PARAM;
     }
-    u64 t = port->read_index + blockNo - (port->read_index % nblk);
-    if (blockNo < port->read_index % nblk) t += nblk;
+    const u64 ridx = audio_guest_index(port);
+    u64 t = ridx + blockNo - (ridx % nblk);
+    if (blockNo < ridx % nblk) t += nblk;
     mutex_unlock(&s_audio_mutex);
 
     vm_write64(tag_ea, t);
@@ -953,7 +998,7 @@ s32 cellAudioGetPortTimestamp(u32 portNum, u64 tag, u64* stamp)
         return CELL_AUDIO_ERROR_PARAM;
 
     mutex_lock(&s_audio_mutex);
-    u64 global_counter = s_ports[portNum].read_index;
+    u64 global_counter = audio_guest_index(&s_ports[portNum]);
     mutex_unlock(&s_audio_mutex);
     if (tag > global_counter)
         return CELL_AUDIO_ERROR_TAG_NOT_FOUND;
