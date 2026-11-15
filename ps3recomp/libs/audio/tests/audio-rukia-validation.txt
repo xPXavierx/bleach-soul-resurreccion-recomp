@@ -1,0 +1,80 @@
+Rukia audio executor scheduling -- 2026-11-15
+===========================================
+Baseline: 8daad86 (cadence, JobGuard wake and parked coherence lock fixes).
+Windows / llvm-mingw; private local BLUS30769 assets and generated game code.
+No proprietary assets or generated game code are included in this change.
+
+Cause and retained correction
+-----------------------------
+The menu identifies Rukia's episode as 5, Exequias. Combat in its first corridor
+still starved audio under CPU contention. The audio chain coordinator already
+joined MMCSS, but the SPU workers executing its DSP jobs did not. In the baseline,
+the mean span of six consecutive audio jobs was 7.863 ms: 2.676 ms inside job
+bodies and 5.187 ms BETWEEN jobs. The audio block period is 5.333 ms.
+
+The dedicated audio instance's SPU workers now join MMCSS Pro Audio for their
+thread lifetime, using the existing helper and PS3_SPURS_AUDIO_PREFIX opt-in.
+Registration is reverted when the worker exits. Other instances are unchanged.
+No lead/buffer increase, skipped samples or time stretching was added.
+
+Prerequisite: the Windows coherence lock must park contending threads. An
+earlier executor-priority experiment regressed while that lock still spun
+(see audio-producer-validation.txt). This follow-up was measured after the
+SRW-lock correction; it does not reintroduce that spin-based combination.
+
+Bounded diagnostic comparison
+-----------------------------
+Same episode, normal difficulty, first combat corridor, 4K / 60 target / VSync,
+lead=4 blocks and four logical CPUs (process affinity 0xF) to stress scheduling.
+Copied saves; no modification of originals. Real WASAPI endpoint, muted output,
+internal float PCM capture. QPC/job events recorded in memory for 60 seconds;
+measurement armed only after reaching Rukia's combat area.
+
+                                           Baseline       Corrected
+Consumed PCM blocks                          11251           11250
+All-zero PCM blocks                           4591               0
+PPU wait for SPU completion, p99           25.5720 ms       3.9643 ms
+Six-job span, mean                         7.8628 ms       2.6442 ms
+Sum of job body durations, mean            2.6760 ms       2.5590 ms
+Between-job gaps per sequence, mean        5.1868 ms       0.0852 ms
+Between-job gaps per sequence, p99        22.0266 ms       0.2791 ms
+
+The large reduction is in scheduling gaps, not DSP computation. Job body
+durations are wall-clock measurements and can themselves include preemption.
+The baseline combat was user-driven; corrected combat was automated. Commands
+were not identical, so this is not an exact deterministic replay or an FPS
+benchmark. A preliminary wrong-episode run was excluded before measurement.
+
+Final release verification
+--------------------------
+The release executable contains no added diagnostic probes. The same Rukia
+route and stress settings were checked with native PCM capture and automated
+combat. The selected interval from 70 to 145 seconds contains 14063 blocks:
+zero all-zero blocks. The nested 80..140 s window contains 11250 blocks, also
+zero all-zero blocks. No NaN/Inf samples. Process exited normally after 151.172 s;
+save loaded, no timeout or reported blocker. Screenshot confirmed Rukia fighting
+hollows in the first corridor. Build succeeded with the retained worker change.
+
+Existing JobGuard/coherence tests were not rerun: their implementations did not
+change in this follow-up. Their passing results are in the preceding report.
+
+Limits
+------
+PCM continuity validates production, not perceptual listening or uninterrupted
+physical playback at every endpoint. GetCurrentPadding()==0 observations alone
+are not proof of an audible dropout. The entire episode, bosses, device hotplug
+and long-session drift were not tested. No universal zero-cut or FPS-gain claim.
+
+Private evidence and delivery
+----------------------------
+Codex outputs/audio-fix: rukia-validation.json, rukia-sequence-costs.json,
+per-case settings/logs/PCM/traces and diagnostic-rukia.patch.
+Cases: rukia-baseline, rukia-executor-verified-auto,
+       rukia-executor-release-auto (final release).
+Final EXE SHA-256:
+54752a49c8c353cbdf1031c4e6c56dbedb16208121f31e2a1c712952bd3df706
+
+Iniciar-audio-corrigido.cmd uses final settings with mute, capture and scripted
+controls removed, and all available CPUs. Existing manual-play saves remain
+separate. Original Claude and installed executables are preserved. A 20 s WAV
+excerpt of corrected Rukia combat is included. Changes are local, not published.

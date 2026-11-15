@@ -1840,6 +1840,12 @@ static DWORD WINAPI spurs_pm_worker(LPVOID p)
     struct SpursInst* si = slot->instance;
 #ifdef _WIN32
     { ULONG g = 256 * 1024; SetThreadStackGuarantee(&g); }
+    /* The audio chain's deadlines include the actual DSP jobs, not just the
+     * coordinator that dispatches them. Coherence contention must park (see
+     * spu_coherency.c), otherwise a multimedia worker can starve its owner. */
+    AudioThreadClass audio_class = {0};
+    if (spurs_audio_instance(si->prefix))
+        audio_class = audio_thread_class_begin("SPURS audio executor");
 #endif
     /* Lanes of an instance named with the BLEACH_LANE_SAMPLE_SPLIT prefix sample as tag 4. */
     { const char* split = getenv("BLEACH_LANE_SAMPLE_SPLIT");
@@ -1876,6 +1882,9 @@ static DWORD WINAPI spurs_pm_worker(LPVOID p)
         WakeAllConditionVariable(&si->wake);
     }
     ReleaseSRWLockExclusive(&si->lock);
+#ifdef _WIN32
+    audio_thread_class_end(&audio_class);
+#endif
     return 0;
 }
 
@@ -2654,6 +2663,7 @@ static void jc_run_one_job(u32 job_ea, int idx, u32 size_desc)
     int ran = spu_workload_dispatch_job(vm_base + ea_bin, size_bin, job_ea, size_desc);
 
 
+
     if (!ran && getenv("PS3_SPU_STRICT")) {
         fprintf(stderr, "[bleach] STOP: SPU job not executed; binary=0x%08X size=%u job=0x%08X\n",
                 ea_bin, size_bin, job_ea);
@@ -2761,6 +2771,7 @@ s32 cellSpursJobGuardNotify(u64 guard_ea)
      * was still running -- the title notified 6 times and the chain completed
      * 2 laps, so the thread waiting on the other 4 completions never woke. */
     s_jobguards[i].pending++;
+
 
     WakeAllConditionVariable(&s_jobguard_wake);
 
