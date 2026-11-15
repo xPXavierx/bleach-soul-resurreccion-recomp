@@ -16,7 +16,7 @@ static class Instalacao
     public const string Titulo = "Bleach: Soul Resurrección";
     public const string NomeAtalho = "Bleach Soul Resurrección";
     public const string Id = "BleachSoulResurreccion";   // ASCII: data folder, registry key
-    public const string Versao = "1.0";
+    public const string Versao = "1.2";
 
     // The launcher's folder: bin\, configuracao.json, rpcs3\, firmware\ (personal build).
     public static string Pasta = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');

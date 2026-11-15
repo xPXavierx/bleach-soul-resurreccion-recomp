@@ -66,7 +66,7 @@ it runs as a native Windows program.
 
 ### Playing
 
-Open the **Bleach Soul Resurrección** shortcut. In the launcher pick the resolution, FPS, display mode, aspect
+Open the **Bleach Soul Resurrección** shortcut. In the launcher pick the resolution, FPS, display mode, V-Sync, aspect
 ratio and the game text language, then click **Play**. The launcher remembers your dump; an `.iso` is mounted by Windows
 automatically while the game runs.
 
@@ -75,7 +75,7 @@ automatically while the game runs.
   that they are kept on disk.
 - **Esc does not quit the game.** To quit, use the game's menu, the window's close button or Alt+F4.
 - **Shortcuts without the launcher:** see the *Launch options* folder in the install folder (`--play`, `--fps`,
-  `--display`, `--resolution`, `--aspect`, `--text`).
+  `--display`, `--vsync on|off`, `--resolution`, `--aspect`, `--text`).
 
 ### Known issues
 
@@ -178,7 +178,7 @@ RPCS3; ele roda como um programa nativo do Windows.
 
 ### Como jogar
 
-Abra o atalho **Bleach Soul Resurrección**. No launcher escolha resolução, FPS, modo de tela, proporção e o idioma do
+Abra o atalho **Bleach Soul Resurrección**. No launcher escolha resolução, FPS, modo de tela, V-Sync, proporção e o idioma do
 texto do jogo, e clique em **Jogar**. O launcher lembra o seu dump; se ele for um `.iso`, o Windows o monta sozinho
 enquanto o jogo roda.
 
@@ -187,7 +187,7 @@ enquanto o jogo roda.
   depois eles ficam guardados no disco.
 - **Esc não fecha o jogo.** Para sair, use o menu do jogo, o botão de fechar da janela ou Alt+F4.
 - **Atalhos sem launcher:** veja a pasta *Opções de execução* na pasta de instalação (`--jogar`, `--fps`,
-  `--tela`, `--resolucao`, `--proporcao`, `--texto`).
+  `--tela`, `--vsync on|off`, `--resolucao`, `--proporcao`, `--texto`).
 
 ### Problemas conhecidos
 
