@@ -335,6 +335,17 @@ static int audio_backend_init(void)
         return -1;
     }
 
+    /* Prime the host queue without advancing any guest port/event. Shared
+     * WASAPI consumes packets in its device period, which need not be our
+     * 256/48000 s period. Leave room for two scheduled guest blocks so the
+     * first engine callback cannot force the guest clock to wait for space. */
+    if (s_wasapi_buf_frames > 2 * CELL_AUDIO_BLOCK_SAMPLES) {
+        const UINT32 prime = s_wasapi_buf_frames - 2 * CELL_AUDIO_BLOCK_SAMPLES;
+        BYTE* buf = NULL;
+        if (SUCCEEDED(s_wasapi_render->lpVtbl->GetBuffer(s_wasapi_render, prime, &buf)))
+            s_wasapi_render->lpVtbl->ReleaseBuffer(s_wasapi_render, prime,
+                                                   AUDCLNT_BUFFERFLAGS_SILENT);
+    }
     s_wasapi_client->lpVtbl->Start(s_wasapi_client);
     return 0;
 }
@@ -439,11 +450,10 @@ static inline float ld_be_f32(const float* p)
 }
 
 /* PS3_AUDIO_LEAD=<blocks> (default 0): the read index the guest sees runs this many
- * blocks ahead of the block actually mixed. A title that writes the block at the
- * published index right after each period event (Bleach: Soul Resurrección) has a
- * single 5.3 ms period to do it; on a busy host (4 logical cores) it missed ~20% of
- * them and the mixer played the cleared block -- crackling. Each block of lead gives
- * it another period, at the cost of 5.3 ms of latency. Capped below the ring size. */
+ * blocks ahead of the block actually mixed. Each block adds 5.33 ms of producer
+ * scheduling margin and latency. This is a bounded jitter buffer, not a substitute
+ * for periodic guest notifications or timely scheduling of the audio pipeline.
+ * Titles may already produce ahead of their published index. Capped below the ring size. */
 static u64 audio_lead(u64 nblock)
 {
     static int lead = -1;
@@ -600,33 +610,78 @@ static void audio_notify_event_queues(void)
 }
 
 #ifdef _WIN32
+/* Deadline-driven audio must be scheduled as multimedia work, not compete
+ * at normal priority with all rendering/SPU workers on a small CPU. Load
+ * only the system DLL; older/restricted hosts retain a bounded fallback. */
+typedef struct {
+    HMODULE module;
+    HANDLE task;
+    BOOL (WINAPI *revert)(HANDLE);
+} AudioThreadClass;
+
+static AudioThreadClass audio_thread_class_begin(void)
+{
+    AudioThreadClass c = {0};
+    c.module = LoadLibraryExW(L"avrt.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (c.module) {
+        HANDLE (WINAPI *begin)(LPCWSTR, LPDWORD) =
+            (HANDLE (WINAPI *)(LPCWSTR, LPDWORD))GetProcAddress(c.module, "AvSetMmThreadCharacteristicsW");
+        BOOL (WINAPI *priority)(HANDLE, int) =
+            (BOOL (WINAPI *)(HANDLE, int))GetProcAddress(c.module, "AvSetMmThreadPriority");
+        c.revert = (BOOL (WINAPI *)(HANDLE))GetProcAddress(c.module, "AvRevertMmThreadCharacteristics");
+        DWORD index = 0;
+        if (begin && c.revert) c.task = begin(L"Pro Audio", &index);
+        if (c.task && priority) priority(c.task, 1 /* AVRT_PRIORITY_HIGH */);
+    }
+    if (!c.task) SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+    printf("[cellAudio] scheduling: %s\n", c.task ? "MMCSS Pro Audio" : "highest-priority fallback");
+    return c;
+}
+
+static void audio_thread_class_end(AudioThreadClass* c)
+{
+    if (c->task) c->revert(c->task);
+    if (c->module) FreeLibrary(c->module);
+}
+
 static unsigned __stdcall audio_mix_thread_func(void* arg)
 {
     (void)arg;
     printf("[cellAudio] Mixing thread started\n");
+    AudioThreadClass thread_class = audio_thread_class_begin();
 
-    /* Pace to the device clock. The PS3 consumes one block every 5.33 ms;
-     * the old Sleep(2)/Sleep(5) loop keyed on a queue depth the 1056-frame
-     * WASAPI buffer can never reach, so it mixed ~225 blocks/s and the device
-     * dropped the surplus: 20% of the audio thrown away, and a guest mixer
-     * (GH3's FMOD) that could not keep ahead of the read index played gaps.
-     * With no device, pace on the performance counter instead. */
+    /* A host buffer-space event is NOT a guest audio tick. A shared WASAPI
+     * endpoint can free two 256-sample blocks at once. Consuming both here
+     * back-to-back clears the second block before the guest awakened by the
+     * first notify has time to produce it, even with an otherwise idle CPU.
+     * Advance guest ports/events on the 48 kHz / 256-sample QPC timeline;
+     * device space is only backpressure. Never busy-spin or replay a backlog
+     * of guest ticks after a stall. The same clock also paces a lost device. */
     LARGE_INTEGER qf, q0; QueryPerformanceFrequency(&qf); QueryPerformanceCounter(&q0);
+    const long long period = (long long)CELL_AUDIO_BLOCK_SAMPLES * qf.QuadPart / CELL_AUDIO_SAMPLE_RATE;
+    HANDLE tick_timer = CreateWaitableTimerExW(NULL, NULL, 0x2 /* HIGH_RESOLUTION */,
+                                              TIMER_MODIFY_STATE | SYNCHRONIZE);
+    if (!tick_timer) tick_timer = CreateWaitableTimerW(NULL, FALSE, NULL);
     unsigned long long blocks = 0;
     while (s_mix_thread_running) {
+        LARGE_INTEGER now; QueryPerformanceCounter(&now);
+        const long long offset =
+            (long long)(blocks * CELL_AUDIO_BLOCK_SAMPLES * qf.QuadPart / CELL_AUDIO_SAMPLE_RATE);
+        const long long due = q0.QuadPart + offset;
+        if (now.QuadPart < due) {
+            LARGE_INTEGER wait;
+            wait.QuadPart = -((due - now.QuadPart) * 10000000LL / qf.QuadPart + 1);
+            if (tick_timer && SetWaitableTimer(tick_timer, &wait, 0, NULL, NULL, FALSE))
+                WaitForSingleObject(tick_timer, 20);
+            else Sleep(1);
+            continue;
+        }
         const int room = audio_backend_room();
         if (room >= 0 && room < CELL_AUDIO_BLOCK_SAMPLES) { audio_backend_wait(); continue; }
-        if (room < 0) {
-            LARGE_INTEGER now; QueryPerformanceCounter(&now);
-            const long long due = q0.QuadPart +
-                (long long)(blocks * CELL_AUDIO_BLOCK_SAMPLES * qf.QuadPart / CELL_AUDIO_SAMPLE_RATE);
-            if (now.QuadPart < due) { Sleep(1); continue; }
-            /* More than 50 ms behind (device just went away, a debugger
-             * stop): drop the backlog instead of mixing it in a burst. */
-            if (now.QuadPart - due > qf.QuadPart / 20)
-                q0.QuadPart = now.QuadPart -
-                    (long long)(blocks * CELL_AUDIO_BLOCK_SAMPLES * qf.QuadPart / CELL_AUDIO_SAMPLE_RATE);
-        }
+        /* Preserve the fractional-sample timeline for normal scheduling
+         * jitter. A larger delay starts a new phase instead of immediately
+         * consuming more guest blocks to catch up. */
+        if (now.QuadPart - due > period / 2) q0.QuadPart = now.QuadPart - offset;
         blocks++;
         /* Mix and submit one block */
         audio_mix_one_block();
@@ -668,6 +723,8 @@ static unsigned __stdcall audio_mix_thread_func(void* arg)
         audio_notify_event_queues();
     }
 
+    if (tick_timer) CloseHandle(tick_timer);
+    audio_thread_class_end(&thread_class);
     printf("[cellAudio] Mixing thread stopped\n");
     return 0;
 }
@@ -877,7 +934,9 @@ s32 cellAudioPortOpen(const CellAudioPortParam* param, u32* portNum)
 
     port->buffer = (float*)(vm_base + guest_buf);     /* host view of guest buffer */
     memset(port->buffer, 0, port->buf_size);
-    vm_write64(guest_ridx, 0);                        /* read index counter (u64, see below) */
+    /* Publish the same producer position from open onward, including optional
+     * lookahead. Starting at zero would skip slots on the first period event. */
+    vm_write64(guest_ridx, audio_guest_index(port) % nblk);
 
     port->port_addr     = guest_buf;
     port->read_idx_addr = guest_ridx;

@@ -1,0 +1,74 @@
+Windows audio cadence correction - 2026-11-15
+
+Status: partial fix. The host-callback burst defect is reproduced and corrected.
+Residual producer gaps remain in the game's four-logical-CPU stress test.
+
+Cause and retained change
+-------------------------
+WASAPI shared-mode buffer capacity is not a 256-sample guest-period clock.
+Two guest blocks were consumed and their events emitted back-to-back when
+the endpoint freed a larger packet, although the average rate was 187.5/s.
+Use a QPC 48kHz/256 timeline and a high-resolution waitable timer. Capacity
+is backpressure. Rebase after a large stall instead of replaying guest ticks.
+Prime the host queue with silence without consuming guest data. Use Windows
+MMCSS Pro Audio for the mixer; normal scheduling failed under CPU contention.
+Initialize the published read index consistently with configured lookahead.
+Retain Bleach's existing private four-block lookahead in launcher/configuracao.json
+(21.33 ms additional margin). The generic SDK default remains zero.
+
+Reproduction and validation
+---------------------------
+test_audio_cadence_win32.c runs the production mixer and real WASAPI endpoint.
+A synthetic producer takes 1 ms to write each block after notification.
+Output is muted at the device, not disabled. Measure after 500 ms warmup.
+Before: 469 blocks, 218 silent, 219 intervals below 2 ms, minimum 0.004 ms.
+After:  468 blocks,   0 silent,   0 intervals below 2 ms, minimum 4.542 ms.
+Device empty-buffer observations: zero in that final synthetic test.
+test_audio_ring.c passes for lookahead 0, 4, 100 (clamped), and -1 (zero),
+covering sizes 8/16/32, three wraps each, all ports, allocation boundaries,
+close/reopen, initial published index, tags and timestamp bounds.
+
+Game comparison: same save copies, input route, 4K, target 60 FPS, VSync,
+four logical CPUs (affinity 0xF), four-block lookahead on BOTH versions.
+Analyze 50..70 seconds of the raw stereo 48kHz mix, 3750 blocks per case.
+                             Before       Retained correction
+Zero PCM blocks                 155                       54
+Contiguous zero runs            124                       31
+Total zero duration          826.67 ms                 288.00 ms
+Longest zero run              48.00 ms                  69.33 ms
+Final rate windows          187.0..188.0/s           187.4..187.6/s
+Final empty-buffer windows      0,0,0,0                  0,0,0,0
+
+One run per condition, not statistical significance. Zero PCM is a dropout
+proxy, not a perceptual listening assessment. The initial level and commands
+were checked in captured frames; this is not a heavy-combat benchmark.
+The longest gap did NOT improve. Do not claim fully fixed audio or FPS gains.
+Private captures, settings, checksums and summaries are in outputs/audio-fix
+in the Codex workspace, not in the public repository. PCM WAV excerpts are
+provided for listening; no proprietary game files are added to Git.
+
+Rejected experiments
+--------------------
+Timer-only pacing: mixer starved under contention; audio ran below real time.
+Extra SPURS priority: no improvement over retained correction (166 zero blocks).
+Extra PPU audio-thread priority: no total-duration improvement (55 zero blocks).
+Alternative same-cycle block tags, suggested by comparison with RPCS3's current
+cellAudioGetPortBlockTag: regression (361 zero blocks); reverted. Unit consistency
+with that reference alone was insufficient to establish compatibility with this
+runtime. Do not present the alternative tag formula as a validated Bleach fix.
+One SPURS test lost its Windows endpoint (AUDCLNT_E_DEVICE_INVALIDATED).
+The user confirmed a device/session change. That run is excluded; its counters
+cannot establish underruns because GetCurrentPadding had failed.
+
+Remaining work
+--------------
+Capture one bounded per-block timeline linking period notification, sgx-audio-thr
+queue receive, SPURS job completion and final DMA write to consumed ring slot.
+This separates producer computation, scheduling, shared-lock stalls and ring
+ordering before changing priorities or buffer sizes again. No more blind priority
+sweeps. Hotplug recovery and longer-session/device-rate drift are unvalidated.
+
+References consulted (implementation is independent, no RPCS3 code imported):
+https://learn.microsoft.com/en-us/windows/win32/api/audioclient/nf-audioclient-iaudioclient-getcurrentpadding
+https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service
+https://raw.githubusercontent.com/RPCS3/rpcs3/master/rpcs3/Emu/Cell/Modules/cellAudio.cpp
