@@ -3,7 +3,7 @@
  *
  * See spu_coherency.h for what this is for. The state here is deliberately
  * plain: a bit per 128-byte line, a small table of the SPU contexts that have
- * ever reserved one, and the lock-line spinlock. Everything that WRITES it runs
+ * ever reserved one, and the lock-line lock. Everything that WRITES it runs
  * with the lock-line lock held (the SPU's GETLLAR, the PPU's coherent store),
  * so the read-modify-write on a shared bitmap byte is serialized. Only
  * spu_coh_is_reserved reads without the lock, which is the entire point: it is
@@ -24,32 +24,20 @@ extern "C" {
 /* ===========================================================================
  * The lock-line lock
  *
- * Moved here from spu_channels.c, where it was a file-static and so could
- * serialize SPU against SPU but not SPU against PPU -- which left the PPU free
- * to write a line in the middle of a PUTLLC's compare-and-commit. Same
- * spinlock, same semantics, now shared. _InterlockedExchange is a clang-cl/MSVC
- * intrinsic (no runtime library symbol needed); elsewhere use the C11
- * equivalent, which lowers to the same LL/SC or lock-xchg on every target.
+ * PPU coherent stores and SPU atomic compare/commit share this lock. On a host
+ * they also share CPU cores: an unbounded spin can keep a descheduled owner
+ * from running, including when the waiter belongs to an audio job. Windows
+ * must park contending threads rather than consume their scheduling quantum.
+ * Keep the existing acquire/release boundary around the entire transaction.
  * ===========================================================================*/
-#if defined(_MSC_VER)
-#include <intrin.h>
-#include <windows.h>   /* SwitchToThread */
-static volatile long g_lockline = 0;
-/* Test-and-test-and-set: spin on a plain read (no cache-line ping-pong) with a
- * pause, and yield after a long wait. The bare exchange loop let GH3's four
- * idle job-policy pollers saturate the line and delay every other SPU atomic
- * -- FMOD's mixer task among them, 25-40 ms at a time. */
+#ifdef _WIN32
+#include <windows.h>
+static SRWLOCK g_lockline = SRWLOCK_INIT;
 void spu_lockline_lock(void)
 {
-    unsigned spins = 0;
-    while (_InterlockedExchange(&g_lockline, 1)) {
-        do {
-            _mm_pause();
-            if (++spins >= 4096) { spins = 0; SwitchToThread(); }
-        } while (g_lockline);
-    }
+    AcquireSRWLockExclusive(&g_lockline);
 }
-void spu_lockline_unlock(void) { _InterlockedExchange(&g_lockline, 0); }
+void spu_lockline_unlock(void) { ReleaseSRWLockExclusive(&g_lockline); }
 #else
 #include <stdatomic.h>
 static atomic_flag g_lockline = ATOMIC_FLAG_INIT;

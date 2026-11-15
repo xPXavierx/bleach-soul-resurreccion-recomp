@@ -1,0 +1,82 @@
+Audio producer synchronization follow-up -- 2026-11-15
+====================================================
+Baseline: 9cc416c, the previously validated cadence correction.
+Windows / llvm-mingw, private local Bleach BLUS30769 assets and generated code.
+No proprietary assets or generated game code are included in this change.
+
+Measured causes and retained corrections
+---------------------------------------
+1. JobGuard used Sleep(1) polling. Notify-to-accept measured median 1.3291 ms,
+   p95 8.514 ms, max 16.2797 ms against a 5.333 ms audio block period.
+   A condition variable now wakes on notify/shutdown, with the predicate and
+   counted credits protected by the same lock. Shutdown cannot lose its wake.
+
+2. The chain coordinator was not covered by worker-priority settings. After
+   the polling fix, a ready audio guard still waited 31.9685 ms. Only the
+   dedicated audio chain coordinator now joins MMCSS, alongside the existing
+   cellAudio mixer. The title opts in via PS3_SPURS_AUDIO_PREFIX=sgx-spurs-;
+   the SDK contains no Bleach addresses. A chain-only capture measured guard
+   median 0.0033 ms, p99 0.0218 ms, max 2.8272 ms.
+
+3. The llvm-mingw build selected the C11 unbounded atomic-flag spin loop for
+   the global PPU/SPU coherence lock. In a slow audio job, 30.1364 of 30.4969 ms
+   was spent acquiring this lock (87.6 million thread cycles for the job).
+   Windows now uses an exclusive SRW lock: contending threads can park instead
+   of burning CPU while the owner needs to run. Transaction boundaries and
+   reservation invalidation are unchanged. Non-Windows code is unchanged.
+
+Bounded game measurements
+-------------------------
+Same initial-level route, copied saves, 4K / 60 target / VSync, lead=4 blocks,
+four logical CPUs (process affinity 0xF), real WASAPI endpoint, internal PCM
+capture. Diagnostic runs stored QPC/cycle events in memory, with no trace I/O
+inside the 43..104 s measurement window. No instrumentation in the final EXE.
+
+                                      Spin lock trace     SRW lock trace
+Audio jobs in 61 s                         68625               68619
+Longest per-job coherence wait           30.1364 ms           5.1630 ms
+Sum of those waits                      43.3859 ms          10.1354 ms
+Longest whole audio job                 30.4969 ms           8.9243 ms
+Zero PCM blocks in this capture             0                   0
+
+Both diagnostic captures happened to have no empty PCM blocks. The lock-time
+comparison establishes a reduced scheduling hazard, not a before/after dropout
+rate. Earlier captures without the lock fix did reproduce cuts, including a
+36.5 ms SPU sequence after a prompt 0.0062 ms guard release.
+
+Final release, without diagnostic probes: normal exit, no timeout/blocker,
+save loaded. Entire selected gameplay interval 43..75 s: 6000 blocks, zero
+all-zero PCM blocks, no NaN/Inf samples. The common 50..70 s interval also has
+zero empty blocks. Final three rate windows: 187.4..187.6 blocks/s, no reported
+late blocks, discarded frames or empty-device-buffer observations.
+
+Zero PCM is a dropout proxy, not a perceptual listening assessment. These
+bounded runs do not prove every scene/device/session is free of audible faults.
+No FPS gain is claimed. Device hotplug and long-session drift remain untested.
+Do not treat a GetCurrentPadding()==0 observation alone as proof of a dropout.
+
+Rejected experiments
+--------------------
+Putting the SPU executor in MMCSS regressed: jobs reached 118..190 ms with high
+CPU-cycle counts. That change was removed. Ordinary ABOVE_NORMAL worker
+priority also left a 32.5 ms sequence and a four-block cut; it was removed too.
+No additional lead/buffer increase or skipped/duplicated samples was retained.
+
+Focused tests
+-------------
+test_spurs_jobguard_wake.c: queued credits, notify threshold/reset, unrelated
+wake, 128 shutdown-entry races; passed. Link-only abort stubs supply unrelated
+SPURS exports and must never execute.
+test_spu_coherency.c: 195 checks passed through real coherent PPU stores.
+test_spu_lockline_contention_win32.c: blocked handoff and 200000 concurrent
+critical sections passed with no overlap or lost updates.
+
+Private evidence / delivery
+---------------------------
+outputs/audio-fix in the Codex workspace: producer-validation.json, per-case
+settings/logs/PCM/traces, diagnostic-source.patch and a 20 s WAV excerpt.
+Final case: lead4-pipeline-park-release.
+EXE SHA-256: 5aa87865aba9940738b2d01edfbc76cb530e761b7f091f581797306bfe791e5c
+Iniciar-audio-corrigido.cmd loads these final settings, removes diagnostic
+flags, enables manual controls and uses all available CPUs. Original installed
+and Claude executables are preserved. Changes are local; no GitHub publication.

@@ -1,6 +1,7 @@
 ﻿{
     "PS3_VOLUME": "0.4",
     "PS3_AUDIO_LEAD": "4",
+    "PS3_SPURS_AUDIO_PREFIX": "sgx-spurs-",
     "RSX_NATIVE_PROGRAMS": "1",
     "RSX_NATIVE_BINDINGS": "1",
     "RSX_NATIVE_PROGRAM_VERIFY": "0",

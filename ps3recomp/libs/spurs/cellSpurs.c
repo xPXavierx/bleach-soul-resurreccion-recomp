@@ -11,6 +11,7 @@
 
 #include "cellSpurs.h"
 #include "../../runtime/platform/win32_compat.h"
+#include "../../runtime/platform/audio_thread.h"
 #include "../../runtime/ps3_log.h"
 #include "spu_workload.h"   /* SPU image -> lifted-entry dispatch (runtime/spu) */
 #include "spurs_native_batch.h"
@@ -1824,6 +1825,15 @@ static void lane_sample_register(void) {}
  * occupies only its own slot; a later runnable producer can use another slot.
  * Admission and lifecycle state are serialized per instance. Guest execution
  * never runs under that lock, and only a genuine return releases contention. */
+/* The launcher identifies the title's dedicated audio instance. Its chain
+ * coordinator is as deadline-sensitive as the SPU worker: promoting only
+ * the worker leaves a ready guard waiting behind unrelated CPU work. */
+static int spurs_audio_instance(const char* name)
+{
+    const char* prefix = getenv("PS3_SPURS_AUDIO_PREFIX");
+    return prefix && prefix[0] && !strncmp(name, prefix, strlen(prefix));
+}
+
 static DWORD WINAPI spurs_pm_worker(LPVOID p)
 {
     struct SpursPmSlot* slot = (struct SpursPmSlot*)p;
@@ -2642,6 +2652,8 @@ static void jc_run_one_job(u32 job_ea, int idx, u32 size_desc)
      * Synchronous by design: a job runs to completion, and the chain's own
      * NEXT/CALL/RET commands are what order them. */
     int ran = spu_workload_dispatch_job(vm_base + ea_bin, size_bin, job_ea, size_desc);
+
+
     if (!ran && getenv("PS3_SPU_STRICT")) {
         fprintf(stderr, "[bleach] STOP: SPU job not executed; binary=0x%08X size=%u job=0x%08X\n",
                 ea_bin, size_bin, job_ea);
@@ -2683,6 +2695,7 @@ static struct {
     int active;
 } s_jobguards[MAX_JOBGUARDS];
 static SRWLOCK s_jobguard_lock = SRWLOCK_INIT;
+static CONDITION_VARIABLE s_jobguard_wake = CONDITION_VARIABLE_INIT;
 
 static int jg_find(u32 ea)
 {
@@ -2748,6 +2761,9 @@ s32 cellSpursJobGuardNotify(u64 guard_ea)
      * was still running -- the title notified 6 times and the chain completed
      * 2 laps, so the thread waiting on the other 4 completions never woke. */
     s_jobguards[i].pending++;
+
+    WakeAllConditionVariable(&s_jobguard_wake);
+
     { u32 remaining = (s_jobguards[i].pending >= s_jobguards[i].reset)
                     ? 0u : s_jobguards[i].reset - s_jobguards[i].pending;
       s_jobguards[i].count = remaining;
@@ -2781,10 +2797,12 @@ s32 cellSpursJobGuardReset(u64 guard_ea)
  * An idle service chain may legitimately wait for arbitrarily long. */
 static int jg_wait(u32 ea, int chain_slot)
 {
+    AcquireSRWLockExclusive(&s_jobguard_lock);
     for (;;) {
-        if (_InterlockedCompareExchange(&s_jobchains[chain_slot].stop_requested, 0, 0))
+        if (_InterlockedCompareExchange(&s_jobchains[chain_slot].stop_requested, 0, 0)) {
+            ReleaseSRWLockExclusive(&s_jobguard_lock);
             return 0;
-        AcquireSRWLockExclusive(&s_jobguard_lock);
+        }
         int i = jg_find(ea);
         if (i < 0) {
             ReleaseSRWLockExclusive(&s_jobguard_lock);
@@ -2802,12 +2820,10 @@ static int jg_wait(u32 ea, int chain_slot)
             ReleaseSRWLockExclusive(&s_jobguard_lock);
             return 1;
         }
-        ReleaseSRWLockExclusive(&s_jobguard_lock);
-#ifdef _WIN32
-        Sleep(1);
-#else
-        usleep(1000);
-#endif
+        /* Notify and shutdown change the predicate under this same lock.
+         * Atomically release it and park: no polling delay and no lost wake
+         * between checking pending credits and going to sleep. */
+        SleepConditionVariableSRW(&s_jobguard_wake, &s_jobguard_lock, INFINITE, 0);
     }
 }
 
@@ -3139,6 +3155,12 @@ static void jc_execute(u32 entry_ea, u32 jc_ea, u32 size_desc, int slot)
 static DWORD WINAPI jc_thread(LPVOID p)
 {
     int slot = (int)(intptr_t)p;
+#ifdef _WIN32
+    AudioThreadClass audio_class = {0};
+    struct SpursInst* si = spurs_inst_find(s_jobchains[slot].spurs_ea);
+    if (si && spurs_audio_instance(si->prefix))
+        audio_class = audio_thread_class_begin("SPURS audio chain");
+#endif
     /* TIMING PROBE (SPURS_JC_DELAY=ms): the real jm2 chain walker is async and
      * picks up jobs as the PPU appends them + fills their descriptors. Our walk
      * is one-shot; if it reads descriptors before the PPU populates the I/O
@@ -3151,6 +3173,9 @@ static DWORD WINAPI jc_thread(LPVOID p)
     /* Tell the application the chain is done. Without this the walk finishes
      * in silence and a thread waiting on the attached queue never runs again. */
     jc_signal_done(s_jobchains[slot].jc_ea, -1);
+#ifdef _WIN32
+    audio_thread_class_end(&audio_class);
+#endif
     _InterlockedExchange(&s_jobchains[slot].running, 0);
     return 0;
 }
@@ -3218,7 +3243,10 @@ s32 cellSpursShutdownJobChain(u64 jc_ea)
     if (PS3_LOG_FIRST(_n, 8)) printf("[cellSpurs] ShutdownJobChain(jc=0x%08X)\n", (u32)jc_ea);
     for (int i = 0; i < MAX_JOBCHAINS; i++) {
         if (s_jobchains[i].jc_ea == (u32)jc_ea) {
+            AcquireSRWLockExclusive(&s_jobguard_lock);
             _InterlockedExchange(&s_jobchains[i].stop_requested, 1);
+            WakeAllConditionVariable(&s_jobguard_wake);
+            ReleaseSRWLockExclusive(&s_jobguard_lock);
             return CELL_OK;
         }
     }

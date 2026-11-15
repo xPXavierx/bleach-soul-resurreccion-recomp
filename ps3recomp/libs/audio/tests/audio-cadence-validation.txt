@@ -60,7 +60,13 @@ One SPURS test lost its Windows endpoint (AUDCLNT_E_DEVICE_INVALIDATED).
 The user confirmed a device/session change. That run is excluded; its counters
 cannot establish underruns because GetCurrentPadding had failed.
 
-Remaining work
+Follow-up
+---------
+The producer timeline and synchronization fixes are now documented in
+audio-producer-validation.txt. This file preserves the earlier cadence-only
+results; its remaining-work list below describes that earlier checkpoint.
+
+Remaining work at this checkpoint
 --------------
 Capture one bounded per-block timeline linking period notification, sgx-audio-thr
 queue receive, SPURS job completion and final DMA write to consumed ring slot.

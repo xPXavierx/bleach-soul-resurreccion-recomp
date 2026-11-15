@@ -14,6 +14,7 @@
 
 #include "../../runtime/memory/vm.h"   /* vm_commit */
 #include "cellAudio.h"
+#include "../../runtime/platform/audio_thread.h"
 #include "../../runtime/ppu/ppu_memory.h"   /* vm_base, vm_read64, vm_write32 */
 #include <stdio.h>
 #include <string.h>
@@ -610,45 +611,11 @@ static void audio_notify_event_queues(void)
 }
 
 #ifdef _WIN32
-/* Deadline-driven audio must be scheduled as multimedia work, not compete
- * at normal priority with all rendering/SPU workers on a small CPU. Load
- * only the system DLL; older/restricted hosts retain a bounded fallback. */
-typedef struct {
-    HMODULE module;
-    HANDLE task;
-    BOOL (WINAPI *revert)(HANDLE);
-} AudioThreadClass;
-
-static AudioThreadClass audio_thread_class_begin(void)
-{
-    AudioThreadClass c = {0};
-    c.module = LoadLibraryExW(L"avrt.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
-    if (c.module) {
-        HANDLE (WINAPI *begin)(LPCWSTR, LPDWORD) =
-            (HANDLE (WINAPI *)(LPCWSTR, LPDWORD))GetProcAddress(c.module, "AvSetMmThreadCharacteristicsW");
-        BOOL (WINAPI *priority)(HANDLE, int) =
-            (BOOL (WINAPI *)(HANDLE, int))GetProcAddress(c.module, "AvSetMmThreadPriority");
-        c.revert = (BOOL (WINAPI *)(HANDLE))GetProcAddress(c.module, "AvRevertMmThreadCharacteristics");
-        DWORD index = 0;
-        if (begin && c.revert) c.task = begin(L"Pro Audio", &index);
-        if (c.task && priority) priority(c.task, 1 /* AVRT_PRIORITY_HIGH */);
-    }
-    if (!c.task) SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-    printf("[cellAudio] scheduling: %s\n", c.task ? "MMCSS Pro Audio" : "highest-priority fallback");
-    return c;
-}
-
-static void audio_thread_class_end(AudioThreadClass* c)
-{
-    if (c->task) c->revert(c->task);
-    if (c->module) FreeLibrary(c->module);
-}
-
 static unsigned __stdcall audio_mix_thread_func(void* arg)
 {
     (void)arg;
     printf("[cellAudio] Mixing thread started\n");
-    AudioThreadClass thread_class = audio_thread_class_begin();
+    AudioThreadClass thread_class = audio_thread_class_begin("cellAudio mixer");
 
     /* A host buffer-space event is NOT a guest audio tick. A shared WASAPI
      * endpoint can free two 256-sample blocks at once. Consuming both here
